@@ -1,0 +1,9 @@
+models/
+artefacts/
+.venv/
+notebooks/runs/
+notebooks/*.pt
+test_img/
+
+
+
