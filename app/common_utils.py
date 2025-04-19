@@ -116,7 +116,7 @@ def save_result_faster_rcnn(original_name, ext, image, results):
 def save_result_yolo(original_name, ext, image, detections):
     # Сохраняем каждую обнаруженную область
     for i, (box, score, cls) in enumerate(zip(detections.xyxy, detections.confidence, detections.class_id)):
-        save_image(original_name, ext, image, box, score, cls)
+        save_image(original_name, ext, image, box, score, cls+1)
 
 
 def save_image(original_name, ext, image, box, score, cls):

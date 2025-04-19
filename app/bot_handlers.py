@@ -17,6 +17,32 @@ import EasyOCR as easyocr
 
 router = Router()
 
+
+async def output_detect_result(message):
+    image_files = utils.get_list_of_images()
+
+    if not image_files:
+        logging.error(f"Нет изображений с корректным форматом имени.")
+        return
+
+    sent_count = 0
+    for image_file, class_name, confidence in image_files:
+        try:
+            caption = (
+                f"🏷 Класс: {class_name}\n"
+                f"🟢 Уверенность: {confidence}"
+            )            
+            await message.answer_photo(
+                FSInputFile(image_file),
+                caption=caption
+            )
+            sent_count += 1
+        except Exception as e:
+            logging.error(f"Error sending {image_file.name}: {e}")
+
+    await message.answer(f"✅ Отправлено {sent_count} результатов (из {len(image_files)})", reply_markup=kb.ocr)
+        
+
 @router.message(CommandStart())
 async def cmd_start(message: types.Message):
     await message.answer("Привет! Загрузи изображение банковской карты.")   #, reply_markup=kb.main
@@ -55,105 +81,34 @@ async def handle_photo(message: types.Message, bot: Bot):
 
 @router.message(F.text == 'YOLOv12')
 async def detect_yolo_v12(message: types.Message, bot: Bot):
+    #await message.answer(f"Файл сохранен по пути: {img_path}")
+    await message.answer("Производится детекция объектов...")
+
     try:
         utils.delete_old_detections()
         img_path = utils.get_image_from_artefacts()
-        yolo.main(img_path)
-        #await message.answer(f"Файл сохранен по пути: {img_path}")
-        await message.answer("Производится детекция объектов...")
-
-        image_files = utils.get_list_of_images()
-
-        if not image_files:
-            logging.error(f"Нет изображений с корректным форматом имени.")
-            return
-
-        sent_count = 0
-
-        for image_file, class_name, confidence in image_files:
-            try:
-                caption = (
-                    f"🏷 Класс: {class_name}\n"
-                    f"🟢 Уверенность: {confidence}"
-                )
-                
-                await message.answer_photo(
-                    FSInputFile(image_file),
-                    caption=caption
-                )
-                sent_count += 1
-            except Exception as e:
-                logging.error(f"Error sending {image_file.name}: {e}")
-
-        await message.answer(f"✅ Отправлено {sent_count} результатов (из {len(image_files)})", reply_markup=kb.ocr)
-        
+        yolo.main(img_path)        
     except Exception as e:
         await message.answer(f"❌ Ошибка: {str(e)}")
         logging.error(f"Detect error: {e}")
+    
+    await output_detect_result(message)
 
 
 @router.message(F.text == 'Faster R-CNN')
 async def detect_faster_rcnn(message: types.Message, bot: Bot):
+    #await message.answer(f"Файл сохранен по пути: {img_path}")
+    await message.answer("Производится детекция объектов...")
+    
     try:
         utils.delete_old_detections()
         img_path = utils.get_image_from_artefacts()
-        faster.main(img_path)
-        #await message.answer(f"Файл сохранен по пути: {img_path}")
-        await message.answer("Производится детекция объектов...")
-
-        # # Регулярное выражение для проверки формата имени файла
-        # pattern = re.compile(r'^(\d+)_(\d+\.\d+)_')
-
-        # # Получаем и фильтруем изображения
-        # image_files = []
-        # for file in ARTEFACTS_DIR.glob('*.*'):
-        #     logging.info(f"Имя файла: {file.name}")
-        #     if file.is_file() and file.suffix.lower() in ['.jpg', '.jpeg', '.png']:
-        #         logging.info(f"Файл существует и явл. изображением: {file.name}")
-        #         match = pattern.match(file.stem)
-        #         if match:
-        #             #class_id = match.group(1)
-        #             class_name = CLASS_NAMES[int(match.group(1))]
-        #             logging.info(f"Класс изображениея: {class_name}")
-        #             confidence = match.group(2) #.replace('_', '.')
-        #             #image_files.append((file, class_id, confidence))
-        #             image_files.append((file, class_name, confidence))
-
-        # if not image_files:
-        #     await message.answer("Нет изображений с корректным форматом имени")
-        #     return
-                
-        # Сортируем по уверенности (от высокой к низкой)
-        #image_files.sort(key=lambda x: float(x[2]), reverse=True)
-
-        image_files = utils.get_list_of_images()
-
-        if not image_files:
-            logging.error(f"Нет изображений с корректным форматом имени.")
-            return
-
-        sent_count = 0
-
-        for image_file, class_name, confidence in image_files:
-            try:
-                caption = (
-                    f"🏷 Класс: {class_name}\n"
-                    f"🟢 Уверенность: {confidence}"
-                )
-                
-                await message.answer_photo(
-                    FSInputFile(image_file),
-                    caption=caption
-                )
-                sent_count += 1
-            except Exception as e:
-                logging.error(f"Error sending {image_file.name}: {e}")
-
-        await message.answer(f"✅ Отправлено {sent_count} результатов (из {len(image_files)})", reply_markup=kb.ocr)
-        
+        faster.main(img_path)        
     except Exception as e:
         await message.answer(f"❌ Ошибка: {str(e)}")
         logging.error(f"Detect error: {e}")
+
+    await output_detect_result(message)
 
 
 @router.message(F.text == 'EasyOCR')
