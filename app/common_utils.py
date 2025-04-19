@@ -7,12 +7,13 @@ from PIL import Image
 
 from constants import ARTEFACTS_DIR, CLASS_NAMES
 
+# Полностью очистить каталог артефактов
 def clean_artefact_dir():
     if os.path.exists('artefacts'):
         shutil.rmtree('artefacts')
     os.makedirs('artefacts')
 
-
+# Из каталога артефактов удалить изображения боксов, оставить загруженную картинку карты
 def delete_old_detections():
     artefacts_dir = 'artefacts'
     
@@ -109,7 +110,7 @@ def save_detect_result(image_path, results, method):
 def save_result_faster_rcnn(original_name, ext, image, results):
     # Сохраняем каждую обнаруженную область
     for i, (box, score, cls) in enumerate(zip(results['boxes'], results['scores'], results['classes'])):
-        save_image()
+        save_image(original_name, ext, image, box, score, cls)
 
 
 def save_result_yolo(original_name, ext, image, detections):
@@ -138,6 +139,7 @@ def save_image(original_name, ext, image, box, score, cls):
         
         # Сохраняем изображение
         Image.fromarray(cropped).save(crop_path)
+
 
 def prepare_enhanced_results(orig_path, results, class_id, processed_img):
     """
