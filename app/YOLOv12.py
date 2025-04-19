@@ -24,16 +24,17 @@ def main(image_path):
     annotated_image = box_annotator.annotate(scene=annotated_image, detections=detections)
     annotated_image = label_annotator.annotate(scene=annotated_image, detections=detections)
 
-    # 4. Вывод результатов в консоль
-    class_names = ["Cardholder", "CardNumber", "DateExpired"]
-    for i, (xyxy, conf, cls_id) in enumerate(zip(detections.xyxy, detections.confidence, detections.class_id)):
-        print(f"Объект {i+1}: {class_names[cls_id]}({cls_id}). Уверенность: {conf:.2%}")
+    # 4. Если вызов из консоли, то вывод результатов в консоль
+    if __name__ == "__main__":
+        class_names = ["Cardholder", "CardNumber", "DateExpired"]
+        for i, (xyxy, conf, cls_id) in enumerate(zip(detections.xyxy, detections.confidence, detections.class_id)):
+            print(f"Объект {i+1}: {class_names[cls_id]}({cls_id}). Уверенность: {conf:.2%}")
 
-    # 5. Отображение результата
-    cv2.imshow("Detection Results", annotated_image)
-    print("Нажмите любую клавишу для закрытия окна...")
-    cv2.waitKey(0)  # Ожидание нажатия любой клавиши
-    cv2.destroyAllWindows()
+        # 5. Отображение результата
+        cv2.imshow("Detection Results", annotated_image)
+        print("Нажмите любую клавишу для закрытия окна...")
+        cv2.waitKey(0)  # Ожидание нажатия любой клавиши
+        cv2.destroyAllWindows()
 
     # 4. Сохраняем изображения продетекировнных областей
     utils.save_detect_result(image_path, detections, 'YOLO')
