@@ -6,4 +6,17 @@ ultralytics>=8.0.0
 opencv-python>=4.5.0
 torch>=2.0.0
 matplotlib>=3.0.0
+tensorflow
+keras
+tensorrt
+keras_ocr
+pandas
+torch
+torchvision
+torchaudio
+scikit-learn
+
+
+
+
 

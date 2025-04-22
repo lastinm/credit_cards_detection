@@ -4,6 +4,12 @@ artefacts/
 notebooks/runs/
 notebooks/*.pt
 test_img/
+notebooks/runs/
+notebooks/*.h5
+notebooks/output/
+
+
+
 
 
 

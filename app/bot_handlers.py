@@ -149,3 +149,43 @@ async def recognition_EasyOCR(message: types.Message, bot: Bot):
     # except Exception as e:
     #     await message.answer(f"❌ Ошибка: {str(e)}")
     #     logging.error(f"Detect error: {e}")
+
+
+@router.message(F.text == 'KerasOCR')
+async def recognition_KerasOCR(message: types.Message, bot: Bot):
+    #await message.answer(f"Здесь будет результат распознавания...")
+    image_files = utils.get_list_of_images()
+
+    if not image_files:
+        logging.error(f"Нет изображений с корректным форматом имени.")
+        return
+
+    sent_count = 0
+    # try:
+    for image_file, class_name, confidence in image_files:
+        #logging.INFO(f"Передаем в KerasOCR файл: {image_file.name}.")
+        try:
+            img_path, results, class_id, processed_img = KerasOCR.recognize_images_in_directory(image_file, languages=['en', 'ru'], gpu=False)
+
+            print("Подготавливаем результаты")
+            orig_temp_path, processed_temp_path, recognized_texts = utils.prepare_enhanced_results(img_path, results, class_id, processed_img)
+
+            # Отправляем пользователю
+            await message.answer_photo(FSInputFile(orig_temp_path, filename="detected region.jpg"))
+            await message.answer_photo(FSInputFile(processed_temp_path, filename="OCR processed.jpg"))
+            await message.answer(f"{recognized_texts}", reply_markup=kb.ocr)
+            # Отправляем распознанный текст
+            #text_message = "Распознанный текст:\n" + "\n".join(texts)
+            #await message.answer(text_message)
+            os.unlink(orig_temp_path)
+            os.unlink(processed_temp_path)
+
+            sent_count += 1
+        except Exception as e:
+            logging.error(f"Error sending {image_file.name}: {e}")
+
+    await message.answer(f"✅ Отправлено {sent_count} результатов (из {len(image_files)})", reply_markup=kb.ocr)
+        
+    # except Exception as e:
+    #     await message.answer(f"❌ Ошибка: {str(e)}")
+    #     logging.error(f"Detect error: {e}")
