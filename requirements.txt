@@ -15,6 +15,7 @@ torch
 torchvision
 torchaudio
 scikit-learn
+transformers
 
 
 

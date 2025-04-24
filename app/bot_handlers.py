@@ -13,7 +13,7 @@ import FasterRCNN as faster
 import YOLOv12 as yolo
 #from app.constants import ARTEFACTS_DIR, CLASS_NAMES
 import EasyOCR as easyocr
-
+import TrOCR as trocr
 
 router = Router()
 
@@ -151,7 +151,7 @@ async def recognition_EasyOCR(message: types.Message, bot: Bot):
     #     logging.error(f"Detect error: {e}")
 
 
-@router.message(F.text == 'KerasOCR')
+@router.message(F.text == 'TrOCR')
 async def recognition_KerasOCR(message: types.Message, bot: Bot):
     #await message.answer(f"Здесь будет результат распознавания...")
     image_files = utils.get_list_of_images()
@@ -165,20 +165,23 @@ async def recognition_KerasOCR(message: types.Message, bot: Bot):
     for image_file, class_name, confidence in image_files:
         #logging.INFO(f"Передаем в KerasOCR файл: {image_file.name}.")
         try:
-            img_path, results, class_id, processed_img = KerasOCR.recognize_images_in_directory(image_file, languages=['en', 'ru'], gpu=False)
+            #img_path, results, class_id, processed_img = trocr.recognize_images_in_directory(image_file, languages=['en', 'ru'], gpu=False)
+            outputs, processor = trocr.recognize_images_in_directory(image_file)
+            full_text, confidences = trocr.get_text_with_confidence(outputs, processor)
 
             print("Подготавливаем результаты")
-            orig_temp_path, processed_temp_path, recognized_texts = utils.prepare_enhanced_results(img_path, results, class_id, processed_img)
+            await message.answer(f"{full_text}")
+            # orig_temp_path, processed_temp_path, recognized_texts = utils.prepare_enhanced_results(img_path, results, class_id, processed_img)
 
-            # Отправляем пользователю
-            await message.answer_photo(FSInputFile(orig_temp_path, filename="detected region.jpg"))
-            await message.answer_photo(FSInputFile(processed_temp_path, filename="OCR processed.jpg"))
-            await message.answer(f"{recognized_texts}", reply_markup=kb.ocr)
-            # Отправляем распознанный текст
-            #text_message = "Распознанный текст:\n" + "\n".join(texts)
-            #await message.answer(text_message)
-            os.unlink(orig_temp_path)
-            os.unlink(processed_temp_path)
+            # # Отправляем пользователю
+            # await message.answer_photo(FSInputFile(orig_temp_path, filename="detected region.jpg"))
+            # await message.answer_photo(FSInputFile(processed_temp_path, filename="OCR processed.jpg"))
+            # await message.answer(f"{recognized_texts}", reply_markup=kb.ocr)
+            # # Отправляем распознанный текст
+            # #text_message = "Распознанный текст:\n" + "\n".join(texts)
+            # #await message.answer(text_message)
+            # os.unlink(orig_temp_path)
+            # os.unlink(processed_temp_path)
 
             sent_count += 1
         except Exception as e:
