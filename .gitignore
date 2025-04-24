@@ -1,12 +1,14 @@
 models/
 artefacts/
 .venv/
-notebooks/runs/
-notebooks/*.pt
 test_img/
-notebooks/runs/
+notebooks/logs/
 notebooks/*.h5
 notebooks/output/
+notebooks/runs/
+notebooks/*.pt
+app/__pycache__/
+
 
 
 
