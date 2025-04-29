@@ -8,6 +8,7 @@ notebooks/output/
 notebooks/runs/
 notebooks/*.pt
 app/__pycache__/
+train/Faster R-CNN/exp/
 
 
 
