@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Аннотация изображений</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        img { max-width: 100%; margin-bottom: 20px; border: 1px solid #ddd; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input[type="text"] { width: 100%; padding: 8px; font-size: 16px; }
+        button { 
+            padding: 10px 20px; 
+            font-size: 16px; 
+            background: #4CAF50; 
+            color: white; 
+            border: none; 
+            cursor: pointer;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Аннотация изображения</h1>
+        <img src="/static/{{ image_file }}" alt="Изображение для аннотации">
+        
+        <form method="post" action="/process" enctype="application/x-www-form-urlencoded">
+            <input type="hidden" name="image_file" value="{{ image_file }}">
+                       
+            <div class="form-group">
+                <label for="field2" class="required">CardNumber:</label>
+                <input type="text" id="field2" name="field2" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="field3"  class="required">DateExpired: </label>
+                <input type="text" id="field3" name="field3" required>
+            </div>
+                      
+            <div class="form-group">
+                <label for="field1">CardHolder (необязательное):</label>
+                <input type="text" id="field1" name="field1">
+            </div>
+
+            <button type="submit">Сохранить и продолжить</button>
+        </form>
+    </div>
+</body>
+</html>

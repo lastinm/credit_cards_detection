@@ -18,6 +18,11 @@ scikit-learn
 transformers
 simple_parsing==0.1.2.post1
 pycocotools==2.0.8
+python-Levenshtein
+fastapi
+uvicorn
+python-multipart
+
 
 
 
