@@ -138,16 +138,20 @@ def train(
 
 @dataclass
 class DatasetPaths:
-    train_image_dir: str = r"/home/lastinm/PROJECTS/CV/Card Detection.v3i.coco(added 8 images, resized split)/train/images/"
-    val_image_dir: str = r"/home/lastinm/PROJECTS/CV/Card Detection.v3i.coco(added 8 images, resized split)/valid/images/"
-    train_coco_json: str = r"/home/lastinm/PROJECTS/CV/Card Detection.v3i.coco(added 8 images, resized split)/train/_annotations.coco.json"
-    val_coco_json: str = r"/home/lastinm/PROJECTS/CV/Card Detection.v3i.coco(added 8 images, resized split)/valid/_annotations.coco.json"
+    dataset_path = '/home/lastinm/PROJECTS/credit_cards_detection/dataset/coco'
+    #/home/lastinm/PROJECTS/credit_cards_detection/dataset/coco/train/images
+    #/home/lastinm/PROJECTS/credit_cards_detection/dataset/coco/train/_annotations.coco.json
+    #/home/lastinm/PROJECTS/credit_cards_detection/dataset/coco/valid
+    train_image_dir: str = fr"{dataset_path}/train/images/"
+    val_image_dir: str = fr"{dataset_path}/valid/images/"
+    train_coco_json: str = fr"{dataset_path}/train/_annotations.coco.json"
+    val_coco_json: str = fr"{dataset_path}/valid/_annotations.coco.json"
 
 @dataclass
 class TrainingConfig:
     epochs: int = 200
     batch_size: int = 6  # Больше 6 на 12Гб GPU лучше не выставлять
-    val_eval_freq: int = 5
+    val_eval_freq: int = 2
     exp_folder: str = 'exp'
 
 if __name__ == "__main__":

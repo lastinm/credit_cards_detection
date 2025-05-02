@@ -1,5 +1,7 @@
 models/
+dataset/
 artefacts/
+.vscode/
 .venv/
 test_img/
 notebooks/logs/
@@ -9,7 +11,8 @@ notebooks/runs/
 notebooks/*.pt
 app/__pycache__/
 train/Faster R-CNN/exp/
-
+train/Faster R-CNN/__pycache__/
+train/YOLOv12/runs/
 
 
 
