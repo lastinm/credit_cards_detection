@@ -152,7 +152,7 @@ async def recognition_EasyOCR(message: types.Message, bot: Bot):
 
 
 @router.message(F.text == 'TrOCR')
-async def recognition_KerasOCR(message: types.Message, bot: Bot):
+async def recognition_TrOCR(message: types.Message, bot: Bot):
     #await message.answer(f"Здесь будет результат распознавания...")
     image_files = utils.get_list_of_images()
 
