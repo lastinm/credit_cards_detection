@@ -8,6 +8,7 @@
         img { max-width: 100%; margin-bottom: 20px; border: 1px solid #ddd; }
         .form-group { margin-bottom: 15px; }
         label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .required:after { content: " *"; color: red; }
         input[type="text"] { width: 100%; padding: 8px; font-size: 16px; }
         button { 
             padding: 10px 20px; 
@@ -23,7 +24,7 @@
 <body>
     <div class="container">
         <h1>Аннотация изображения</h1>
-        <img src="/static/{{ image_file }}" alt="Изображение для аннотации">
+        <img src="{{ image_data }}" alt="Изображение с аннотациями">
         
         <form method="post" action="/process" enctype="application/x-www-form-urlencoded">
             <input type="hidden" name="image_file" value="{{ image_file }}">
@@ -34,7 +35,7 @@
             </div>
             
             <div class="form-group">
-                <label for="field3"  class="required">DateExpired: </label>
+                <label for="field3">DateExpired (необязательное):</label>
                 <input type="text" id="field3" name="field3">
             </div>
                       
