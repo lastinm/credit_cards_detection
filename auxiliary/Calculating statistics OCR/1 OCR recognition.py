@@ -22,10 +22,11 @@ from ultralytics import YOLO
 
 
 # Конфигурация
-IMAGES_DIR = Path("/home/lastinm/PROJECTS/credit_cards_detection/dataset/ocr val")
+ROOT_DIR = '/home/lastinm/PROJECTS/credit_cards_detection'
+IMAGES_DIR = Path(rf"{ROOT_DIR}/dataset/ocr val")
 RESULTS_CSV = "results.csv"
-YOLO_MODEL_PATH = f'/home/lastinm/PROJECTS/credit_cards_detection/train/YOLOv12/runs/detect/train4/weights/best.pt'
-VAL_DATA_PATH = r"/home/lastinm/PROJECTS/credit_cards_detection/auxiliary/Reference values for OCR/image_data.csv"
+YOLO_MODEL_PATH = rf"{ROOT_DIR}/train/YOLOv12/runs/detect/train4/weights/best.pt"
+VAL_DATA_PATH = rf"/{ROOT_DIR}/auxiliary/Reference values for OCR/image_data.csv"
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 
@@ -59,7 +60,7 @@ def calculate_metrics(pred_text, true_text):
             return {'similarity': 0.0, 'exact_match': False}
         
         return {
-            'similarity': min(1.0, max(0.0, ratio(pred_norm, true_norm))),  # Ограничиваем 0-1
+            'similarity': min(1.0, max(0.0, ratio(pred_norm, true_norm))),  # Ограничиваем 0-1. Используем расстояние Ливенштейна
             'exact_match': pred_norm == true_norm
         }
     except:
@@ -111,7 +112,7 @@ def recognize_with_easyocr(image, coords, field_type):
         
         allowlists = {
             'CardNumber': '0123456789 ',
-            'DateExpired': '0123456789/',
+            'DateExpired': '0123456789/-',
             'CardHolder': None
         }
         
@@ -262,7 +263,7 @@ def main():
         processed_count = 0
         all_results = []  # Собираем все результаты в памяти
 
-        true_data_df = true_data_df     # [:20] для тестирования можно ограничить выборку
+        #true_data_df = true_data_df[:20]   # для тестирования можно ограничить выборку
 
         for _, row in true_data_df.iterrows():
             image_path = IMAGES_DIR / row['image']
