@@ -10,7 +10,7 @@ import common_utils as utils
 def main(image_path):
     # 1. Загрузка модели
     image = cv2.imread(image_path)
-    model = YOLO('/home/lastinm/PROJECTS/FINAL/notebooks/runs/detect/train/weights/best.pt')
+    model = YOLO('/home/lastinm/PROJECTS/credit_cards_detection/train/YOLOv12/runs/detect/train4/weights/best.pt')
 
     # 2. Детекция на изображении
     results = model(image, verbose=False)[0]

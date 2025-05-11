@@ -1,0 +1,58 @@
+=== EasyOCR ===
+Процент условно точных совпадений: 12.04%
+Всего точных совпадений: 108
+Из них условно точных: 13
+
+=== TrOCR ===
+Процент условно точных совпадений: 1.69%
+Всего точных совпадений: 236
+Из них условно точных: 4
+
+Примеры (EasyOCR):
+
+Изображение: Media1_jpeg_jpg.rf.9863f37fb8e4d11c5d2bb482286b7ad1.jpg
+Тип: CardNumber
+Эталон: '4454 3000 0357 2853'
+Распознано: '44543000 0357 2853'
+
+Изображение: Media3_jpeg_jpg.rf.6bfc2563023025ab8dac82f8c389cf7a.jpg
+Тип: CardNumber
+Эталон: '4263 4333 4709 9449'
+Распознано: '4263 4333 4 709 9449'
+
+Изображение: Media4_jpeg_jpg.rf.64d95032c2b8ab8a934ac61e9b68491b.jpg
+Тип: CardNumber
+Эталон: '5324 5635 2014 2725'
+Распознано: '53245635 2014 2725'
+
+Изображение: a21_jpeg_jpg.rf.6235ec711a29931741da0887f0590425.jpg
+Тип: CardNumber
+Эталон: '4000 2345 6000 1207'
+Распознано: '4 0 00 2345 6 000 1207'
+
+Изображение: a3_jpeg_jpg.rf.5a34a605be972989f2c513a84d1a615c.jpg
+Тип: CardHolder
+Эталон: 'MASTERCARD INSTANT'
+Распознано: 'MA STERCARD INSTANT'
+
+Примеры (TrOCR):
+
+Изображение: a5_jpeg_jpg.rf.3afe8a3bb27ba258f90ec426d534fe95.jpg
+Тип: CardHolder
+Эталон: 'CARDHOLDER NAME'
+Распознано: 'CARD HOLDER NAME'
+
+Изображение: a5_jpeg_jpg.rf.432fbe24abdef1a33232b2f80bd860de.jpg
+Тип: CardHolder
+Эталон: 'CARDHOLDER NAME'
+Распознано: 'CARD HOLDER NAME'
+
+Изображение: card22_jpg.rf.15f0a57a40498b78119314e51a509e5d.jpg
+Тип: DateExpired
+Эталон: '05/27'
+Распознано: '05 / 27'
+
+Изображение: card2_jpg.rf.7bd04f1cd24873ced9fe590e78d596b1.jpg
+Тип: CardHolder
+Эталон: 'G RAYMOND'
+Распознано: 'GRAYMOND'
