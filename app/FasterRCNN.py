@@ -107,7 +107,7 @@ def visualize_results_matplotlib(image_path, results, class_names):
 def main(image_path):
     # 1. Загрузка модели
     model = load_model(
-        checkpoint_path='train/YOLOv12/runs/detect/train4/weights/best.pt', #/home/lastinm/PROJECTS/credit_cards_detection/train/YOLOv12/runs/detect/train4/weights/best.pt
+        checkpoint_path=r"/home/lastinm/PROJECTS/credit_cards_detection/train/Faster R-CNN/exp/summary/02-05-2025-15-46-48/best_model.pth",
         num_classes=4  # Укажите реальное число ваших классов (3 класса + фон)
         )
 
