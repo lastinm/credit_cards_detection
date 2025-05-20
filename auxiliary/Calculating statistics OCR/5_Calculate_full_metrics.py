@@ -52,13 +52,10 @@ def calculate_metrics(true_texts, pred_texts, is_char_level=False):
             if true_item and pred_item:
                 if true_item == pred_item:
                     tp += 1  # True Positive
-                else:
-                    fp += 1  # False Positive (лишний символ/слово)
-                    fn += 1  # False Negative (пропущенный символ/слово)
             elif true_item:
-                fn += 1  # Пропущенный символ/слово
+                fn += 1  # False Negative (пропущенный символ/слово)
             elif pred_item:
-                fp += 1  # Лишний символ/слово
+                fp += 1  # False Positive (лишний символ/слово)
 
     # Расчёт метрик
     precision = tp / (tp + fp) if (tp + fp) > 0 else 0
@@ -132,9 +129,7 @@ def calculate_metrics_with_ci(true_texts, pred_texts, is_char_level=False, confi
             if true_item and pred_item:
                 if true_item == pred_item:
                     tp += 1
-                else:
-                    fp += 1
-                    fn += 1
+                    
             elif true_item:
                 fn += 1
             elif pred_item:

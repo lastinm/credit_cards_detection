@@ -57,7 +57,7 @@ def generate_comparison_boxplot(df):
         plt.plot(x, values, 'o', color=colors[i-1], alpha=0.4, markersize=6)
     
     # Настройки графика
-    plt.title('Сравнение качества распознавания номера карты\n', 
+    plt.title('Сравнение качества распознавания держателя карты\n', 
              fontsize=16, pad=20)
     plt.ylabel('Метрика схожести (0-1)', fontsize=12)
     plt.xlabel('Фреймворк', fontsize=12)
