@@ -24,6 +24,10 @@ uvicorn
 python-multipart
 statsmodels
 tabulate
+tiktoken
+einops
+transformers_stream_generator
+accelerate
 
 
 
