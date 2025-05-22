@@ -28,6 +28,7 @@ tiktoken
 einops
 transformers_stream_generator
 accelerate
+seaborn
 
 
 
