@@ -66,10 +66,10 @@ def calculate_metrics(true_texts, pred_texts, is_char_level=False):
     f1 = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0
 
     return {
-        "Word Accuracy": word_accuracy,
-        "Precision": precision,
-        "Recall": recall,
-        "F1-Score": f1
+        "Word Accuracy": round(word_accuracy, 3),
+        "Precision": round(precision,3),
+        "Recall": round(recall,3),
+        "F1-Score": round(f1,3)
     }
 
 # Загрузка данных
@@ -187,10 +187,10 @@ def calculate_metrics_with_ci(true_texts, pred_texts, is_char_level=False, confi
     recall_ci = proportion_confint(tp, tp+fn, alpha=1-confidence, method='wilson') if (tp+fn) > 0 else (0, 1)
     
     return {
-        "Word Accuracy": (word_acc, word_acc_ci),
-        "Precision": (precision, precision_ci),
-        "Recall": (recall, recall_ci),
-        "F1-Score": (f1, f1_ci)
+        "Word Accuracy": (round(word_acc,3), word_acc_ci),
+        "Precision": (round(precision,3), precision_ci),
+        "Recall": (round(recall,3), recall_ci),
+        "F1-Score": (round(f1,3), f1_ci)
     }
 
 # Анализ с доверительными интервалами
@@ -245,15 +245,15 @@ new_order = ['Field', 'Model', 'Word Accuracy', 'Precision', 'Recall', 'F1-Score
 results_df = results_df[new_order]
 print(results_df.to_markdown(index=False))
 
-metrics = ["Word Accuracy", "Precision", "Recall", "F1-Score"]
-fig, axes = plt.subplots(2, 2, figsize=(14, 10))
-for i, metric in enumerate(metrics):
-    ax = axes[i//2, i%2]
-    results_df.pivot(index="Field", columns="Model", values=metric).plot(kind="bar", ax=ax)
-    ax.set_title(metric)
-    ax.set_ylim(0, 1.1)
-plt.tight_layout()
-plt.savefig("ocr_metrics_comparison.png")  # Сохраняем график
+# metrics = ["Word Accuracy", "Precision", "Recall", "F1-Score"]
+# fig, axes = plt.subplots(2, 2, figsize=(14, 10))
+# for i, metric in enumerate(metrics):
+#     ax = axes[i//2, i%2]
+#     results_df.pivot(index="Field", columns="Model", values=metric).plot(kind="bar", ax=ax)
+#     ax.set_title(metric)
+#     ax.set_ylim(0, 1.1)
+# plt.tight_layout()
+# plt.savefig("ocr_metrics_comparison.png")  # Сохраняем график
 
 # Запуск анализа
 ci_results = analyze_with_scipy_ci(df, field_types)
@@ -291,7 +291,7 @@ for i, metric in enumerate(metrics):
     width = 0.35
     
     # Построение для каждой модели
-    for j, model in enumerate(["EasyOCR", "TrOCR"]):
+    for j, model in enumerate(["EasyOCR", "TrOCR", "PaddleOCR"]):
         model_data = plot_data[plot_data["Model"] == model]
         values = model_data["Value"].values
         ci_lower = model_data["CI Lower"].values
