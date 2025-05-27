@@ -21,6 +21,7 @@ INPUT_CSV = fr"{ROOT_DIR}/auxiliary/Calculating statistics OCR/results.csv"
 IMAGES_DIR = Path(rf"{ROOT_DIR}/dataset/ocr val")
 OUTPUT_DIR = Path('top_fails')
 OUTPUT_DIR.mkdir(exist_ok=True)
+FRAMEWORKS = ['easyocr', 'trocr', 'paddleocr', 'ensemble']
 
 # Параметры отрисовки
 BOX_COLOR = (255, 0, 0)  # Красный
@@ -98,9 +99,8 @@ def draw_annotation(image_path, bbox, true_text, pred_text, similarity, output_p
 
 def save_worst_images():
     """Сохраняет топ-10 худших изображений с аннотациями"""
-    frameworks = ['easyocr', 'trocr']
     
-    for framework in frameworks:
+    for framework in FRAMEWORKS:
         framework_dir = OUTPUT_DIR / framework
         framework_dir.mkdir(exist_ok=True)
         
@@ -141,7 +141,7 @@ def save_error_statistics():
         f.write("=== Общая статистика по ошибкам распознавания ===\n\n")
         f.write(f"Всего записей в данных: {total_records}\n\n")
         
-        for framework in ['easyocr', 'trocr']:
+        for framework in FRAMEWORKS:
             errors = len(df[df[f'{framework}_exact_match'] == False])
             error_percent = errors / total_records * 100
             
@@ -161,9 +161,18 @@ def save_top_errors():
         errors_trocr = df[(df['field_type'] == field_type) & 
                         (df['trocr_exact_match'] == False)][['true_text', 'trocr_text']].drop_duplicates()
         
+        errors_paddleocr = df[(df['field_type'] == field_type) & 
+                        (df['paddleocr_exact_match'] == False)][['true_text', 'paddleocr_text']].drop_duplicates()
+        
+        errors_ensemble = df[(df['field_type'] == field_type) & 
+                (df['ensemble_exact_match'] == False)][['true_text', 'ensemble_text']].drop_duplicates()
+        
         top_errors[field_type] = {
             'EasyOCR': errors_easyocr.head(10),
-            'TrOCR': errors_trocr.head(10)
+            'TrOCR': errors_trocr.head(10),
+            'PaddleOCR': errors_paddleocr.head(10),
+            'Ensemble': errors_ensemble.head(10)
+
         }
     
     with open(OUTPUT_DIR / 'top10_errors.txt', 'w') as f:
@@ -173,7 +182,15 @@ def save_top_errors():
                 f.write(f"\nФреймворк: {framework}\n")
                 for _, row in error_df.iterrows():
                     true = row['true_text']
-                    pred = row['easyocr_text'] if framework == 'EasyOCR' else row['trocr_text']
+                    if framework == 'EasyOCR':
+                        pred = row['easyocr_text']
+                    elif framework == 'TrOCR':
+                        pred = row['trocr_text']
+                    elif framework == 'PaddleOCR':
+                        pred = row['paddleocr_text']
+                    else:
+                        pred = row['ensemble_text']
+                      
                     f.write(f"Эталон: '{true}'\nРаспознано: '{pred}'\n{'='*50}\n")
 
 def analyze_conditional_accuracy():
@@ -181,18 +198,28 @@ def analyze_conditional_accuracy():
     df['true_norm'] = df['true_text'].str.replace(' ', '').str.upper()
     df['easyocr_norm'] = df['easyocr_text'].str.replace(' ', '').str.upper()
     df['trocr_norm'] = df['trocr_text'].str.replace(' ', '').str.upper()
-    
+    df['paddleocr_norm'] = df['paddleocr_text'].str.replace(' ', '').str.upper()
+    df['ensemble_norm'] = df['ensemble_text'].str.replace(' ', '').str.upper()      
     cond_accurate_easyocr = df[(df['easyocr_exact_match'] == True) & 
                              (df['true_text'] != df['easyocr_text'])]
     cond_accurate_trocr = df[(df['trocr_exact_match'] == True) & 
                            (df['true_text'] != df['trocr_text'])]
+    cond_accurate_paddleocr = df[(df['paddleocr_exact_match'] == True) & 
+                           (df['true_text'] != df['paddleocr_text'])]
+    cond_accurate_ensemble = df[(df['ensemble_exact_match'] == True) & 
+                           (df['true_text'] != df['ensemble_text'])]    
     
     total_easyocr = len(df[df['easyocr_exact_match'] == True])
     percent_easyocr = (len(cond_accurate_easyocr) / total_easyocr) * 100 if total_easyocr > 0 else 0
     
     total_trocr = len(df[df['trocr_exact_match'] == True])
     percent_trocr = (len(cond_accurate_trocr) / total_trocr) * 100 if total_trocr > 0 else 0
-    
+
+    total_paddleocr = len(df[df['paddleocr_exact_match'] == True])
+    percent_paddleocr = (len(cond_accurate_paddleocr) / total_paddleocr) * 100 if total_paddleocr > 0 else 0
+
+    total_ensemble = len(df[df['ensemble_exact_match'] == True])
+    percent_ensemble = (len(cond_accurate_ensemble) / total_ensemble) * 100 if total_ensemble > 0 else 0   
     with open(OUTPUT_DIR / 'problem_accuracy.txt', 'w') as f:
         f.write("=== EasyOCR ===\n")
         f.write(f"Процент условно точных совпадений: {percent_easyocr:.2f}%\n")
@@ -203,8 +230,18 @@ def analyze_conditional_accuracy():
         f.write(f"Процент условно точных совпадений: {percent_trocr:.2f}%\n")
         f.write(f"Всего точных совпадений: {total_trocr}\n")
         f.write(f"Из них условно точных: {len(cond_accurate_trocr)}\n\n")
-        
+
+        f.write("=== PaddleOCR ===\n")
+        f.write(f"Процент условно точных совпадений: {percent_paddleocr:.2f}%\n")
+        f.write(f"Всего точных совпадений: {total_paddleocr}\n")
+        f.write(f"Из них условно точных: {len(cond_accurate_paddleocr)}\n\n")
+
+        f.write("=== Ensemble ===\n")
+        f.write(f"Процент условно точных совпадений: {percent_ensemble:.2f}%\n")
+        f.write(f"Всего точных совпадений: {total_ensemble}\n")
+        f.write(f"Из них условно точных: {len(cond_accurate_ensemble)}\n\n")        
         f.write("Примеры (EasyOCR):\n")
+
         for _, row in cond_accurate_easyocr.head(5).iterrows():
             f.write(f"\nИзображение: {row['image']}\nТип: {row['field_type']}\n")
             f.write(f"Эталон: '{row['true_text']}'\nРаспознано: '{row['easyocr_text']}'\n")
@@ -214,14 +251,26 @@ def analyze_conditional_accuracy():
             f.write(f"\nИзображение: {row['image']}\nТип: {row['field_type']}\n")
             f.write(f"Эталон: '{row['true_text']}'\nРаспознано: '{row['trocr_text']}'\n")
 
-def plot_similarity_histogram():
-    """Строит гистограмму распределения схожести для обоих фреймворков"""
+        f.write("\nПримеры (PaddleOCR):\n")
+        for _, row in cond_accurate_paddleocr.head(5).iterrows():
+            f.write(f"\nИзображение: {row['image']}\nТип: {row['field_type']}\n")
+            f.write(f"Эталон: '{row['true_text']}'\nРаспознано: '{row['paddleocr_text']}'\n")
+
+        f.write("\nПримеры (Ensemble):\n")
+        for _, row in cond_accurate_ensemble.head(5).iterrows():
+            f.write(f"\nИзображение: {row['image']}\nТип: {row['field_type']}\n")
+            f.write(f"Эталон: '{row['true_text']}'\nРаспознано: '{row['ensemble_text']}'\n")
+
+def plot_similarity_histogram_заслоняют():
+    """Строит гистограмму распределения схожести для трех фреймворков"""
     plt.figure(figsize=(12, 6))
     
     # Данные для гистограммы
     easyocr_sim = df['easyocr_similarity']
     trocr_sim = df['trocr_similarity']
-    
+    paddleocr_sim = df['paddleocr_similarity']
+    ensemble_sim = df['ensemble_similarity']
+          
     # Настройки гистограммы
     bins = np.linspace(0, 1, 21)  # 20 корзин от 0 до 1
     alpha = 0.7
@@ -230,8 +279,14 @@ def plot_similarity_histogram():
     plt.hist(easyocr_sim, bins=bins, alpha=alpha, color='#1f77b4', label='EasyOCR')
     
     # Построение гистограммы для TrOCR
-    plt.hist(trocr_sim, bins=bins, alpha=alpha, color='#ff7f0e', label='TrOCR')
-    
+    plt.hist(trocr_sim, bins=bins, alpha=alpha, color="#ffab0e", label='TrOCR')
+
+    # Построение гистограммы для PadleOCR
+    plt.hist(paddleocr_sim, bins=bins, alpha=alpha, color="#3eff0e", label='PaddleOCR')
+
+    # Построение гистограммы для Ensemble
+    plt.hist(ensemble_sim_sim, bins=bins, alpha=alpha, color="#ff0e0e", label='PaddleOCR')
+
     # Настройка графика
     plt.title('Распределение схожести распознавания текста', fontsize=14)
     plt.xlabel('Схожесть (через растояние Левенштейна)', fontsize=12)
@@ -245,6 +300,55 @@ def plot_similarity_histogram():
     plt.close()
     
     print(f"Гистограмма сохранена в {output_path}")
+
+def plot_similarity_histogram():
+    """Строит гистограмму распределения схожести для трех фреймворков"""
+    plt.figure(figsize=(12, 6))
+    
+    # Данные для гистограммы
+    easyocr_sim = df['easyocr_similarity']
+    trocr_sim = df['trocr_similarity']
+    paddleocr_sim = df['paddleocr_similarity']
+    ensemble_sim = df['ensemble_similarity']
+   
+    # Настройки гистограммы
+    bins = np.linspace(0, 1, 21)  # 20 корзин от 0 до 1
+    alpha = 0.9
+    bar_width = 0.33  # Ширина столбца
+    
+    # Создаем массив позиций для столбцов
+    x = np.arange(len(bins)-1)
+    
+    # Построение гистограмм со смещением
+    plt.bar(x - bar_width, np.histogram(easyocr_sim, bins=bins)[0], 
+            width=bar_width, alpha=alpha, color='#1f77b4', label='EasyOCR')
+    
+    plt.bar(x, np.histogram(trocr_sim, bins=bins)[0], 
+            width=bar_width, alpha=alpha, color='#ffab0e', label='TrOCR')
+    
+    plt.bar(x + bar_width, np.histogram(paddleocr_sim, bins=bins)[0], 
+            width=bar_width, alpha=alpha, color='#3eff0e', label='PaddleOCR')
+
+    plt.bar(x + bar_width, np.histogram(ensemble_sim, bins=bins)[0], 
+            width=bar_width, alpha=alpha, color='#ff0e0e', label='Ensemble')
+        
+    # Настройка осей и подписей
+    plt.xticks(x, [f"{bins[i]:.1f}-{bins[i+1]:.1f}" for i in range(len(bins)-1)], rotation=45)
+    
+    # Настройка графика
+    plt.title('Распределение схожести распознавания текста', fontsize=14)
+    plt.xlabel('Диапазон схожести (через расстояние Левенштейна)', fontsize=12)
+    plt.ylabel('Количество распознаваний', fontsize=12)
+    plt.legend(loc='upper left', fontsize=12)
+    plt.grid(True, linestyle='--', alpha=0.7, axis='y')
+    
+    # Улучшаем читаемость
+    plt.tight_layout()
+    
+    # Сохранение графика
+    output_path = OUTPUT_DIR / 'similarity_distribution.png'
+    plt.savefig(output_path, dpi=300, bbox_inches='tight')
+    plt.close()
 
 # Выполняем анализ
 print("Анализ данных...")

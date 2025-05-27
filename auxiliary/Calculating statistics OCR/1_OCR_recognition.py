@@ -1,12 +1,13 @@
 # 1. Детектируем поля реквизитов Yolo
-# 2. Далее распознаем текст в областях EasyOCR и TrOCR
+# 2. Далее распознаем текст в областях EasyOCR, PaddleOCR и TrOCR
 # 3. Сравниваем с эталонными значениями
 # 4. Результаты пишем в файл results.csv
 # === Описание версии
 # Для распознавания номеров карт в TrOCR используем в наборе только цифры
 
 import os
-import re
+import tempfile
+#import re
 import csv
 import pandas as pd
 import cv2
@@ -17,6 +18,7 @@ from pathlib import Path
 from datetime import datetime
 from transformers import TrOCRProcessor, TrOCRForCausalLM, VisionEncoderDecoderModel, AutoTokenizer
 import easyocr
+from paddleocr import TextRecognition
 import torch
 from ultralytics import YOLO
 
@@ -33,7 +35,10 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 # Инициализация моделей
 print("Инициализация моделей...")
 yolo_model = YOLO(YOLO_MODEL_PATH)
+
 easyocr_reader = easyocr.Reader(['en'])
+paddleocr_reader = TextRecognition()
+
 # Инициализация компонентов TrOCR
 print("Инициализация TrOCR...")
 trocr_processor = TrOCRProcessor.from_pretrained("microsoft/trocr-base-printed")
@@ -175,6 +180,32 @@ def recognize_with_trocr(image, coords, field_type):
     except Exception as e:
         print(f"TrOCR error: {str(e)}")
         return ""
+    
+def recognize_with_paddleocr(image, coords):
+    try:
+        x1, y1, x2, y2 = map(int, coords)
+        cropped = image.crop((x1, y1, x2, y2))
+        # Создаем временный файл
+        with tempfile.NamedTemporaryFile(suffix='.jpg', delete=False) as tmp_file:
+            temp_path = tmp_file.name        
+        # Сохраняем вырезанную область во временный файл
+        cropped.save(temp_path, quality=95)
+
+        results = paddleocr_reader.predict(input=temp_path)
+        
+        # Удаляем временный файл
+        os.unlink(temp_path)
+
+        return results[0]['rec_text']
+    except Exception as e:
+        print(f"PaddleOCR error: {str(e)}")
+        return ""
+
+def recognize_with_ensemble(image, coords, field_type):
+    if field_type == "CardNumber":
+        return recognize_with_paddleocr(image, coords)
+    else:
+        return recognize_with_trocr(image, coords, field_type)
 
 def process_image(image_path, true_data):
     """Обработка одного изображения с полной обработкой ошибок"""
@@ -195,25 +226,35 @@ def process_image(image_path, true_data):
             
             try:
                 # Распознавание текста
-                easyocr_text = recognize_with_easyocr(image, coords, field_type)
-                trocr_text = recognize_with_trocr(image, coords, field_type)
+                easyocr_text    = recognize_with_easyocr(image, coords, field_type)
+                trocr_text      = recognize_with_trocr(image, coords, field_type)
+                paddleocr_text  = recognize_with_paddleocr(image, coords)
+                ensemble_text   = recognize_with_ensemble(image, coords, field_type)
                 
                 # Расчет метрик
                 metrics = {
-                    'easyocr': calculate_metrics(easyocr_text, true_text) if true_text else {'similarity': 0, 'exact_match': False},
-                    'trocr': calculate_metrics(trocr_text, true_text) if true_text else {'similarity': 0, 'exact_match': False}
+                    'easyocr':  calculate_metrics(easyocr_text, true_text) if true_text else {'similarity': 0, 'exact_match': False},
+                    'trocr':    calculate_metrics(trocr_text, true_text) if true_text else {'similarity': 0, 'exact_match': False},
+                    'paddleocr': calculate_metrics(paddleocr_text, true_text) if true_text else {'similarity': 0, 'exact_match': False},
+                    'ensemble': calculate_metrics(ensemble_text, true_text) if true_text else {'similarity': 0, 'exact_match': False}
                 }
                 
                 results.append({
                     'image': os.path.basename(image_path),
                     'field_type': field_type,
                     'true_text': true_text,
+                    'paddleocr_text': paddleocr_text,
+                    'paddleocr_similarity': round(metrics['paddleocr']['similarity'], 4),
+                    'paddleocr_exact_match': metrics['paddleocr']['exact_match'],
                     'easyocr_text': easyocr_text,
                     'easyocr_similarity': round(metrics['easyocr']['similarity'], 4),
                     'easyocr_exact_match': metrics['easyocr']['exact_match'],
                     'trocr_text': trocr_text,
                     'trocr_similarity': round(metrics['trocr']['similarity'], 4),
                     'trocr_exact_match': metrics['trocr']['exact_match'],
+                    'ensemble_text': ensemble_text,
+                    'ensemble_similarity': round(metrics['ensemble']['similarity'], 4),
+                    'ensemble_exact_match': metrics['ensemble']['exact_match'],
                     'confidence': round(det['confidence'], 4),
                     'processing_time': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                     'bbox': f"{det['xmin']},{det['ymin']},{det['xmax']},{det['ymax']}"
@@ -245,8 +286,10 @@ def main():
         # Определение структуры результатов
         fieldnames = [
             'image', 'field_type', 'true_text', 
+            'paddleocr_text', 'paddleocr_similarity', 'paddleocr_exact_match',
             'easyocr_text', 'easyocr_similarity', 'easyocr_exact_match',
             'trocr_text', 'trocr_similarity', 'trocr_exact_match',
+            'ensemble_text', 'ensemble_similarity', 'ensemble_exact_match',
             'processing_time', 'confidence', 'bbox'
         ]
 
