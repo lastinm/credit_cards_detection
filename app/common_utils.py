@@ -202,7 +202,7 @@ def prepare_enhanced_results(orig_path, results, class_id, processed_img):
     if confidences:  # Проверяем, что массив не пустой
         average_confidence = statistics.mean(confidences)
     
-    recognized_texts = f"'{full_text}' (точность: {average_confidence:.3f})"
+    recognized_texts = f"'{full_text}' (уверенность: {average_confidence:.3f})"
     # Вывод результатов
     print(recognized_texts)
 

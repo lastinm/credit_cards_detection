@@ -172,7 +172,7 @@ async def recognition_TrOCR(message: types.Message, bot: Bot):
             full_text, confidences = trocr.get_text_with_confidence(outputs, processor)
 
             print("Подготавливаем результаты")
-            await message.answer(f"{full_text}, (уверенность: {confidences:.3f})")
+            await message.answer(f"\'{full_text}\' (уверенность: {confidences:.3f})")
             # orig_temp_path, processed_temp_path, recognized_texts = utils.prepare_enhanced_results(img_path, results, class_id, processed_img)
 
             # # Отправляем пользователю
@@ -214,7 +214,7 @@ async def recognition_PaddleOCR(message: types.Message, bot: Bot):
             full_text, confidences = paddleocr.recognize_images_in_directory(image_file)
 
             print("Подготавливаем результаты")
-            await message.answer(f"{full_text}, (уверенность: {confidences:.3f})")
+            await message.answer(f"\'{full_text}\' (уверенность: {confidences:.3f})")
             # orig_temp_path, processed_temp_path, recognized_texts = utils.prepare_enhanced_results(img_path, results, class_id, processed_img)
 
             # # Отправляем пользователю

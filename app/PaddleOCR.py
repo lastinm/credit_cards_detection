@@ -4,6 +4,8 @@ import cv2
 #from torchvision.transforms import functional as F
 import numpy as np
 import statistics
+import os
+import tempfile
 
 
 from constants import ARTEFACTS_DIR
@@ -27,25 +29,23 @@ def recognize_images_in_directory(posix_img_path):
         class_id = posix_img_path.name.split('_')[0]
               
         # Загрузка и предобработка изображения
-        # cv_image = cv2.imread(img_path)
-        # #img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        # cv_image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)
+        cv_image = cv2.imread(img_path)
+        #img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        cv_image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)
 
-        # Увеличьте маленький текст:
-        #cv_image = cv2.resize(cv_image, None, fx=1.25, fy=1, interpolation=cv2.INTER_CUBIC)
-
-        #pil_image = Image.fromarray(cv_image)
-        
+        # Увеличим маленький текст:
+        cv_image = cv2.resize(cv_image, None, fx=1.5, fy=1, interpolation=cv2.INTER_CUBIC)
+      
         # Создаем временный файл
-        # with tempfile.NamedTemporaryFile(suffix='.jpg', delete=False) as tmp_file:
-        #     temp_path = tmp_file.name        
-        # # Сохраняем вырезанную область во временный файл
-        # cropped.save(temp_path, quality=95)
+        with tempfile.NamedTemporaryFile(suffix='.jpg', delete=False) as tmp_file:
+            temp_path = tmp_file.name        
+        # Сохраняем изображение во временный файл
+        cv2.imwrite(temp_path, cv_image)
 
         results = paddleocr_reader.predict(input=img_path)
         
         # Удаляем временный файл
-        # os.unlink(temp_path)
+        os.unlink(temp_path)
 
         return results[0]['rec_text'], results[0]['rec_score']
     
