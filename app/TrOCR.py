@@ -3,6 +3,7 @@ import torch
 from PIL import Image
 import cv2
 import numpy as np
+import statistics
 
 
 from constants import ARTEFACTS_DIR
@@ -34,8 +35,12 @@ def get_text_with_confidence(outputs, processor):
     
     # Собираем полный текст
     full_text = ''.join(result_text)
+
+    # Теперь высчитаем среднее значение
+    if confidences:  # Проверяем, что массив не пустой
+        average_confidence = statistics.mean(confidences)
         
-    return full_text, confidences
+    return full_text, average_confidence
 
 
 def recognize_images_in_directory(posix_img_path):
@@ -66,7 +71,9 @@ def recognize_images_in_directory(posix_img_path):
         pil_image = Image.fromarray(cv_image)
         
         # Предобработка и распознавание
-        pixel_values = processor(pil_image, return_tensors="pt").pixel_values
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        model.to(device)
+        pixel_values = processor(pil_image, return_tensors="pt").pixel_values.to(device)
 
         # Генерация текста
         outputs = model.generate(
@@ -101,7 +108,7 @@ def main():
         print(f"Длина текста: {len(full_text)}, Уверенностей: {len(confidences)}")
         print("Соответствие символов и уверенностей:")
         for char, conf in zip(full_text, confidences):
-            print(f"'{char}': {conf:.1%}")
+            print(f"'{char}': (точность:{conf:.1%}")
 
         #visualize_enhanced_results(img_path, results, class_id, processed_img)
 

@@ -4,6 +4,7 @@ import easyocr
 from PIL import Image
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+import statistics
 
 from constants import ARTEFACTS_DIR
 import common_utils as utils
@@ -50,6 +51,8 @@ def recognize_images_in_directory(posix_img_path, languages=['en', 'ru'], gpu=Fa
         # # Бинаризация (адаптивный метод)
         #img = cv2.adaptiveThreshold(img, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
         #                           cv2.THRESH_BINARY_INV, 11, 2)
+
+        #img = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]  # Бинаризация
         
         # Увеличение резкости (для мелкого текста)
         #kernel = np.array([[-1,-1,-1], [-1,9,-1], [-1,-1,-1]])
@@ -84,11 +87,25 @@ def visualize_enhanced_results(orig_path, results, class_id, processed_img):
     # Загрузка изображения
     orig_img = cv2.cvtColor(cv2.imread(str(orig_path)), cv2.COLOR_BGR2RGB)
     
+    # Собираем результаты
+    result_text = []
+    confidences = []
+    for i, (_, text, prob) in enumerate(results):
+        #print(f"{i+1}. {text} (точность: {prob:.2f})")
+        result_text.append(text)
+        confidences.append(prob)
+
+    # Собираем полный текст
+    full_text = ''.join(result_text)
+
+    # Теперь высчитаем среднее значение
+    if confidences:  # Проверяем, что массив не пустой
+        average_confidence = statistics.mean(confidences)
+    
     # Вывод результатов
     print("Распознанный текст:")
-    for i, (_, text, prob) in enumerate(results):
-        print(f"{i+1}. {text} (точность: {prob:.2f})")
-    
+    print(f"'{full_text}' (уверенность: {average_confidence:.3f})")
+
     # Создаем фигуру только в интерактивном режиме
     cv2.imshow("Original", cv2.cvtColor(orig_img, cv2.COLOR_RGB2BGR))
     cv2.imshow("Processed", processed_img)

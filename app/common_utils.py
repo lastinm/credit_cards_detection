@@ -3,6 +3,7 @@ import os, shutil, io, imghdr, re, tempfile
 import logging
 import cv2
 from PIL import Image
+import statistics
 
 
 from constants import ARTEFACTS_DIR, CLASS_NAMES
@@ -182,8 +183,27 @@ def prepare_enhanced_results(orig_path, results, class_id, processed_img):
     processed_temp_path = save_temp_image(processed_img)
     
     # Формируем текстовые результаты
-    recognized_texts = [f"{i+1}. {text} (точность: {prob:.2f})" 
-                       for i, (_, text, prob) in enumerate(results)]
+    # recognized_texts = [f"{i+1}. {text} (точность: {prob:.2f})" 
+    #                    for i, (_, text, prob) in enumerate(results)]
+    # print(f"{recognized_texts}")    
+
+    # Собираем результаты
+    result_text = []
+    confidences = []
+    for i, (_, text, prob) in enumerate(results):
+        #print(f"{i+1}. {text} (точность: {prob:.2f})")
+        result_text.append(text)
+        confidences.append(prob)
+
+    # Собираем полный текст
+    full_text = ''.join(result_text)
+
+    # Теперь высчитаем среднее значение
+    if confidences:  # Проверяем, что массив не пустой
+        average_confidence = statistics.mean(confidences)
     
-    print(f"{recognized_texts}")    
+    recognized_texts = f"'{full_text}' (точность: {average_confidence:.3f})"
+    # Вывод результатов
+    print(recognized_texts)
+
     return orig_temp_path, processed_temp_path, recognized_texts
