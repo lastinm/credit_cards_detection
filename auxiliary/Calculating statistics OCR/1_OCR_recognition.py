@@ -19,6 +19,7 @@ from datetime import datetime
 from transformers import TrOCRProcessor, TrOCRForCausalLM, VisionEncoderDecoderModel, AutoTokenizer
 import easyocr
 from paddleocr import TextRecognition
+import keras_ocr
 import torch
 from ultralytics import YOLO
 
@@ -31,13 +32,16 @@ YOLO_MODEL_PATH = rf"{ROOT_DIR}/train/YOLOv12/runs/detect/train4/weights/best.pt
 VAL_DATA_PATH = rf"{ROOT_DIR}/auxiliary/Reference values for OCR/image_data.csv"
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
+import tensorflow as tf
+tf.config.set_visible_devices([], 'GPU')  # Отключаем все GPU устройства
 
 # Инициализация моделей
 print("Инициализация моделей...")
 yolo_model = YOLO(YOLO_MODEL_PATH)
 
-easyocr_reader = easyocr.Reader(['en'])
-paddleocr_reader = TextRecognition()
+easyocr_reader      = easyocr.Reader(['en'])
+paddleocr_reader    = TextRecognition()
+keras_ocr_pipeline  = keras_ocr.pipeline.Pipeline()
 
 # Инициализация компонентов TrOCR
 print("Инициализация TrOCR...")
@@ -182,6 +186,7 @@ def recognize_with_trocr(image, coords, field_type):
         return ""
     
 def recognize_with_paddleocr(image, coords):
+
     try:
         x1, y1, x2, y2 = map(int, coords)
         cropped = image.crop((x1, y1, x2, y2))
@@ -199,6 +204,28 @@ def recognize_with_paddleocr(image, coords):
         return results[0]['rec_text']
     except Exception as e:
         print(f"PaddleOCR error: {str(e)}")
+        return ""
+
+def recognize_with_kerasocr(image, coords, field_type):
+    try:             
+        if field_type == "CardHolder":
+            img_np = np.array(image)
+            x1, y1, x2, y2 = map(int, coords)
+            cropped = img_np[y1:y2, x1:x2]    
+            cropped = cv2.resize(cropped, None, fx=2, fy=1, interpolation=cv2.INTER_CUBIC)
+        
+            predictions = keras_ocr_pipeline.recognize([cropped])[0]
+            result_text = []
+            for pred in predictions:
+                result_text.append(pred[0])
+          
+            full_text = ' '.join(result_text)
+            return full_text
+        else:
+            return ""
+    
+    except Exception as e:
+        print(f"KerasOCR error ({field_type}): {str(e)}")
         return ""
 
 def recognize_with_ensemble(image, coords, field_type):
@@ -229,6 +256,7 @@ def process_image(image_path, true_data):
                 easyocr_text    = recognize_with_easyocr(image, coords, field_type)
                 trocr_text      = recognize_with_trocr(image, coords, field_type)
                 paddleocr_text  = recognize_with_paddleocr(image, coords)
+                kerasocr_text   = recognize_with_kerasocr(image, coords, field_type)
                 ensemble_text   = recognize_with_ensemble(image, coords, field_type)
                 
                 # Расчет метрик
@@ -236,6 +264,7 @@ def process_image(image_path, true_data):
                     'easyocr':  calculate_metrics(easyocr_text, true_text) if true_text else {'similarity': 0, 'exact_match': False},
                     'trocr':    calculate_metrics(trocr_text, true_text) if true_text else {'similarity': 0, 'exact_match': False},
                     'paddleocr': calculate_metrics(paddleocr_text, true_text) if true_text else {'similarity': 0, 'exact_match': False},
+                    'kerasocr': calculate_metrics(kerasocr_text, true_text) if true_text else {'similarity': 0, 'exact_match': False},
                     'ensemble': calculate_metrics(ensemble_text, true_text) if true_text else {'similarity': 0, 'exact_match': False}
                 }
                 
@@ -252,6 +281,9 @@ def process_image(image_path, true_data):
                     'trocr_text': trocr_text,
                     'trocr_similarity': round(metrics['trocr']['similarity'], 4),
                     'trocr_exact_match': metrics['trocr']['exact_match'],
+                    'kerasocr_text': kerasocr_text,
+                    'kerasocr_similarity': round(metrics['kerasocr']['similarity'], 4),
+                    'kerasocr_exact_match': metrics['kerasocr']['exact_match'],
                     'ensemble_text': ensemble_text,
                     'ensemble_similarity': round(metrics['ensemble']['similarity'], 4),
                     'ensemble_exact_match': metrics['ensemble']['exact_match'],
@@ -289,6 +321,7 @@ def main():
             'paddleocr_text', 'paddleocr_similarity', 'paddleocr_exact_match',
             'easyocr_text', 'easyocr_similarity', 'easyocr_exact_match',
             'trocr_text', 'trocr_similarity', 'trocr_exact_match',
+            'kerasocr_text', 'kerasocr_similarity', 'kerasocr_exact_match',
             'ensemble_text', 'ensemble_similarity', 'ensemble_exact_match',
             'processing_time', 'confidence', 'bbox'
         ]
