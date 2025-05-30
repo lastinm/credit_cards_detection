@@ -475,14 +475,14 @@ async def compare_OCR(message: types.Message, bot: Bot):
         await message.answer(f"Подождите идет распознавание EasyOCR класса: {class_name}", reply_markup=kb.ocr)
         try:
             img_path, results, class_id, processed_img = easyocr.recognize_images_in_directory(image_file, languages=['en', 'ru'], gpu=False)
-
-            print("Подготавливаем результаты")
-            orig_temp_path, processed_temp_path, recognized_texts = utils.prepare_enhanced_results(img_path, results, class_id, processed_img)
-            os.unlink(orig_temp_path)
-            os.unlink(processed_temp_path)
-
+            # Собираем результаты
+            result_text = []
+            for i, (_, text, prob) in enumerate(results):
+                #print(f"{i+1}. {text} (точность: {prob:.2f})")
+                result_text.append(text)
+            full_text = ''.join(result_text)
             # Добавляем результат
-            df = add_ocr_result(df, 'EasyOCR', class_name, recognized_texts)
+            df = add_ocr_result(df, 'EasyOCR', class_name, full_text)
         except Exception as e:
             logging.error(f"Ошибка распознавания: {image_file.name}: {e}")
 
