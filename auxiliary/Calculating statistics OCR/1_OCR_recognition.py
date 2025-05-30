@@ -86,6 +86,38 @@ def generate_digits_only(pixel_values, max_new_tokens=20):
     )
     return trocr_processor.batch_decode(generated_ids, skip_special_tokens=True)[0]
 
+def get_sorted_predictions(predictions):
+    """Сортировка предсказаний по координатам (слева направо, сверху вниз) для KerasOCR"""
+    # Вычисляем средние Y-координаты для строк
+    line_heights = []
+    for text, box in predictions:
+        y_coords = [point[1] for point in box]
+        line_heights.append(np.mean(y_coords))
+    
+    # Группируем по строкам (с учетом возможного наклона)
+    lines = {}
+    for i, (text, box) in enumerate(predictions):
+        y_mean = line_heights[i]
+        found_line = False
+        for line_y in lines.keys():
+            if abs(y_mean - line_y) < 20:  # Пороговое значение для строк
+                lines[line_y].append((box[0][0], text))  # (X-координата, текст)
+                found_line = True
+                break
+        if not found_line:
+            lines[y_mean] = [(box[0][0], text)]
+    
+    # Сортируем строки сверху вниз
+    sorted_lines = sorted(lines.items(), key=lambda x: x[0])
+    
+    # Сортируем слова в каждой строке слева направо
+    full_text = []
+    for line_y, words in sorted_lines:
+        words_sorted = sorted(words, key=lambda x: x[0])
+        full_text.extend([word[1] for word in words_sorted])
+    
+    return ' '.join(full_text)
+
 def yolo_detect(image_path):
     """Детекция объектов с помощью YOLOv8"""
     try:
@@ -215,11 +247,12 @@ def recognize_with_kerasocr(image, coords, field_type):
             cropped = cv2.resize(cropped, None, fx=2, fy=1, interpolation=cv2.INTER_CUBIC)
         
             predictions = keras_ocr_pipeline.recognize([cropped])[0]
-            result_text = []
-            for pred in predictions:
-                result_text.append(pred[0])
+            # result_text = []
+            # for pred in predictions:
+            #     result_text.append(pred[0])
           
-            full_text = ' '.join(result_text)
+            # full_text = ' '.join(result_text)
+            full_text = get_sorted_predictions(predictions)
             return full_text
         else:
             return ""

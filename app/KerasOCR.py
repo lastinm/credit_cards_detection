@@ -67,11 +67,6 @@ def recognize_with_confidence(image_path):
     predictions = pipeline.recognize([img])
  
     correct_order_text = get_sorted_predictions(predictions[0])
-    # result_text = []
-    # for pred in predictions:
-    #     result_text.append(pred[0])
-          
-    # full_text = ' '.join(result_text)
            
     return correct_order_text, predictions
 

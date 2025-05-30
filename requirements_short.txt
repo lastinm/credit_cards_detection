@@ -33,6 +33,9 @@ tensorflow[and-cuda]==2.15.*
 keras==2.15
 tensorrt
 keras-ocr==0.9.3
+dataframe_image
+
+
 
 
 
