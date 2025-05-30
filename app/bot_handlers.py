@@ -5,13 +5,14 @@ import numpy as np
 import imghdr       # Для проверки формата изображения
 #import re
 from pathlib import Path
-import logging, os                                         
+import logging, os                                  
 
 import bot_keyboards as kb
 import common_utils as utils
 import FasterRCNN as faster
 import YOLOv12 as yolo
 #from app.constants import ARTEFACTS_DIR, CLASS_NAMES
+import KerasOCR as kerasocr
 import EasyOCR as easyocr
 import TrOCR as trocr
 import PaddleOCR as paddleocr
@@ -110,6 +111,43 @@ async def detect_faster_rcnn(message: types.Message, bot: Bot):
         logging.error(f"Detect error: {e}")
 
     await output_detect_result(message)
+
+
+@router.message(F.text == 'KerasOCR')
+async def recognition_KerasOCR(message: types.Message, bot: Bot):
+    #await message.answer(f"Здесь будет результат распознавания...")
+    image_files = utils.get_list_of_images()
+
+    if not image_files:
+        logging.error(f"Нет изображений с корректным форматом имени.")
+        return
+
+    sent_count = 0
+    # try:
+    for image_file, class_name, confidence in image_files:
+        #logging.INFO(f"Передаем в KerasOCR файл: {image_file.name}.")
+        try:
+            full_text, predictions = kerasocr.recognize_with_confidence(image_file)
+            print(f"Рапознан текст KerasOCR: {full_text}.")
+            processed_temp_path = kerasocr.get_tmp_image_file(image_file, predictions)
+
+            # Отправляем пользователю
+            await message.answer_photo(FSInputFile(processed_temp_path, filename="OCR processed.jpg"))
+            #await message.answer(f"{full_text}", reply_markup=kb.ocr)
+            # Отправляем распознанный текст
+            #text_message = "Распознанный текст:\n" + "\n".join(texts)
+            #await message.answer(text_message)
+            os.unlink(processed_temp_path)
+
+            sent_count += 1
+        except Exception as e:
+            logging.error(f"Error sending {image_file.name}: {e}")
+
+    await message.answer(f"✅ Отправлено {sent_count} результатов (из {len(image_files)})", reply_markup=kb.ocr)
+        
+    # except Exception as e:
+    #     await message.answer(f"❌ Ошибка: {str(e)}")
+    #     logging.error(f"Detect error: {e}")
 
 
 @router.message(F.text == 'EasyOCR')

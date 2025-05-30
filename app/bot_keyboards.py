@@ -15,7 +15,8 @@ detect = ReplyKeyboardMarkup(keyboard = [[KeyboardButton(text="Faster R-CNN"),
 # 
 ocr = ReplyKeyboardMarkup(keyboard = [[KeyboardButton(text="Faster R-CNN"),
                                         KeyboardButton(text="YOLOv12")],
-                                        [KeyboardButton(text="EasyOCR"),
+                                        [KeyboardButton(text="KerasOCR"),
+                                        KeyboardButton(text="EasyOCR"),
                                         KeyboardButton(text="TrOCR"),
                                         KeyboardButton(text="PaddleOCR")]],
 
