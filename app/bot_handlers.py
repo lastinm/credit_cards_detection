@@ -30,15 +30,21 @@ async def output_detect_result(message):
     sent_count = 0
     for image_file, class_name, confidence in image_files:
         try:
-            caption = (
-                f"🏷 Класс: {class_name}\n"
-                f"🟢 Уверенность: {confidence}"
-            )            
-            await message.answer_photo(
-                FSInputFile(image_file),
-                caption=caption
-            )
-            sent_count += 1
+            if isinstance(confidence, str):
+                confidence = float(confidence)
+            elif not isinstance(confidence, (float, int)):
+                confidence = 0.0  # или другое значение по умолчанию
+
+            if confidence>0.85:
+                caption = (
+                    f"🏷 Класс: {class_name}\n"
+                    f"🟢 Уверенность: {confidence}"
+                )            
+                await message.answer_photo(
+                    FSInputFile(image_file),
+                    caption=caption
+                )
+                sent_count += 1
         except Exception as e:
             logging.error(f"Error sending {image_file.name}: {e}")
 
@@ -274,3 +280,40 @@ async def recognition_PaddleOCR(message: types.Message, bot: Bot):
     # except Exception as e:
     #     await message.answer(f"❌ Ошибка: {str(e)}")
     #     logging.error(f"Detect error: {e}")
+
+
+@router.message(F.text == 'Сравнить OCR')
+async def compare_OCR(message: types.Message, bot: Bot):
+    pass
+
+@router.message(F.text == 'TrOCR + PaddleOCR')
+async def ensemble_OCR(message: types.Message, bot: Bot):
+    image_files = utils.get_list_of_images()
+
+    if not image_files:
+        logging.error(f"Нет изображений с корректным форматом имени.")
+        return
+
+    sent_count = 0
+    # try:
+    for image_file, class_name, confidence in image_files:
+        #logging.INFO(f"Передаем в KerasOCR файл: {image_file.name}.")
+        try:
+            if class_name == 'CardNumber':
+                full_text, confidences = paddleocr.recognize_images_in_directory(image_file)
+
+                print("Подготавливаем результаты")
+                await message.answer(f"\'{full_text}\' (уверенность: {confidences:.3f})")
+            else:
+                outputs, processor = trocr.recognize_images_in_directory(image_file)
+                full_text, confidences = trocr.get_text_with_confidence(outputs, processor)
+
+                print("Подготавливаем результаты")
+                await message.answer(f"\'{full_text}\' (уверенность: {confidences:.3f})")
+
+            sent_count += 1
+
+        except Exception as e:
+            logging.error(f"Error sending {image_file.name}: {e}")
+
+    await message.answer(f"✅ Отправлено {sent_count} результатов (из {len(image_files)})", reply_markup=kb.ocr)
