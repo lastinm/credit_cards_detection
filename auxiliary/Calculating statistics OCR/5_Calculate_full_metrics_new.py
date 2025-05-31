@@ -52,10 +52,13 @@ def calculate_metrics(true_texts, pred_texts, is_char_level=False):
             if true_item and pred_item:
                 if true_item == pred_item:
                     tp += 1  # True Positive
+                else:
+                    fp += 1  # False Positive (лишний символ/слово)
+                    fn += 1  # False Negative (пропущенный символ/слово)
             elif true_item:
-                fn += 1  # False Negative (пропущенный символ/слово)
+                fn += 1  # Пропущенный символ/слово
             elif pred_item:
-                fp += 1  # False Positive (лишний символ/слово)
+                fp += 1  # Лишний символ/слово
 
     # Расчёт метрик
     precision = tp / (tp + fp) if (tp + fp) > 0 else 0
@@ -68,36 +71,6 @@ def calculate_metrics(true_texts, pred_texts, is_char_level=False):
         "Recall": recall,
         "F1-Score": f1
     }
-
-# Загрузка данных
-df = pd.read_csv("results.csv")
-field_types = {
-    "CardHolder": {"is_char_level": False},
-    "CardNumber": {"is_char_level": True},
-    "DateExpired": {"is_char_level": True}
-}
-results = []
-
-for field, params in field_types.items():
-    subset = df[df["field_type"] == field]
-    
-    # EasyOCR
-    easyocr_metrics = calculate_metrics(
-        subset["true_text"].tolist(),
-        subset["easyocr_text"].tolist(),
-        **params
-    )
-    easyocr_metrics.update({"Model": "EasyOCR", "Field": field})
-    
-    # TrOCR
-    trocr_metrics = calculate_metrics(
-        subset["true_text"].tolist(),
-        subset["trocr_text"].tolist(),
-        **params
-    )
-    trocr_metrics.update({"Model": "TrOCR", "Field": field})
-    
-    results.extend([easyocr_metrics, trocr_metrics])
 
 def calculate_metrics_with_ci(true_texts, pred_texts, is_char_level=False, confidence=0.95, n_bootstrap=1000):
     """Расчет метрик с корректными доверительными интервалами"""
@@ -203,9 +176,25 @@ def analyze_with_scipy_ci(df, field_types, confidence=0.95):
             params["is_char_level"],
             confidence
         )
+
+        # PaddleOCR
+        paddleocr_metrics = calculate_metrics_with_ci(
+            true_texts,
+            subset["paddleocr_text"].tolist(),
+            params["is_char_level"],
+            confidence
+        )
+
+        # Ensemble
+        ensemble_metrics = calculate_metrics_with_ci(
+            true_texts,
+            subset["ensemble_text"].tolist(),
+            params["is_char_level"],
+            confidence
+        )
         
         # Сохранение результатов
-        for model, metrics in [("EasyOCR", easyocr_metrics), ("TrOCR", trocr_metrics)]:
+        for model, metrics in [("EasyOCR", easyocr_metrics), ("TrOCR", trocr_metrics), ("PaddleOCR", paddleocr_metrics), ("Ensemble", ensemble_metrics)]:
             for metric, (value, (ci_lower, ci_upper)) in metrics.items():
                 results.append({
                     "Field": field,
@@ -217,6 +206,52 @@ def analyze_with_scipy_ci(df, field_types, confidence=0.95):
                 })
     
     return pd.DataFrame(results)
+
+# Загрузка данных
+df = pd.read_csv("results.csv")
+field_types = {
+    "CardHolder": {"is_char_level": False},
+    "CardNumber": {"is_char_level": True},
+    "DateExpired": {"is_char_level": True}
+}
+results = []
+
+for field, params in field_types.items():
+    subset = df[df["field_type"] == field]
+    
+    # EasyOCR
+    easyocr_metrics = calculate_metrics(
+        subset["true_text"].tolist(),
+        subset["easyocr_text"].tolist(),
+        **params
+    )
+    easyocr_metrics.update({"Model": "EasyOCR", "Field": field})
+    
+    # TrOCR
+    trocr_metrics = calculate_metrics(
+        subset["true_text"].tolist(),
+        subset["trocr_text"].tolist(),
+        **params
+    )
+    trocr_metrics.update({"Model": "TrOCR", "Field": field})
+
+    # PaddleOCR
+    paddleocr_metrics = calculate_metrics(
+        subset["true_text"].tolist(),
+        subset["paddleocr_text"].tolist(),
+        **params
+    )
+    paddleocr_metrics.update({"Model": "PaddleOCR", "Field": field})
+
+    # Ensemble
+    ensemble_metrics = calculate_metrics(
+        subset["true_text"].tolist(),
+        subset["ensemble_text"].tolist(),
+        **params
+    )
+    ensemble_metrics.update({"Model": "Ensemble", "Field": field})
+    
+    results.extend([easyocr_metrics, trocr_metrics, paddleocr_metrics, ensemble_metrics])
 
 # Результаты
 results_df = pd.DataFrame(results)
@@ -239,7 +274,7 @@ ci_results = analyze_with_scipy_ci(df, field_types)
 
 # Красивое отображение результатов
 def format_ci(row):
-    return f"{row['Value']:.3f} [{row['CI Lower']:.3f}, {row['CI Upper']:.3f}]"
+    return f"{row['Value']:.2f} [{row['CI Lower']:.2f}, {row['CI Upper']:.2f}]"
 
 ci_results["Value (95% CI)"] = ci_results.apply(format_ci, axis=1)
 pivot_results = ci_results.pivot_table(
@@ -270,7 +305,7 @@ for i, metric in enumerate(metrics):
     width = 0.35
     
     # Построение для каждой модели
-    for j, model in enumerate(["EasyOCR", "TrOCR"]):
+    for j, model in enumerate(["EasyOCR", "TrOCR", "PaddleOCR"]):
         model_data = plot_data[plot_data["Model"] == model]
         values = model_data["Value"].values
         ci_lower = model_data["CI Lower"].values
