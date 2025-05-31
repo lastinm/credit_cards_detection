@@ -40,7 +40,7 @@ async def output_detect_result(message):
             elif not isinstance(confidence, (float, int)):
                 confidence = 0.0  # или другое значение по умолчанию
 
-            if confidence>0.85:
+            if confidence>0.50:
                 caption = (
                     f"🏷 Класс: {class_name}\n"
                     f"🟢 Уверенность: {confidence}"
