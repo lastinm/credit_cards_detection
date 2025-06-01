@@ -263,47 +263,69 @@ def analyze_conditional_accuracy():
 
 
 def plot_similarity_histogram():
-    """Строит гистограмму распределения схожести для трех фреймворков"""
+    """Строит гистограмму распределения схожести в процентах от общего количества"""
     plt.figure(figsize=(12, 6))
     
     # Данные для гистограммы
     easyocr_sim = df['easyocr_similarity']
     trocr_sim = df['trocr_similarity']
     paddleocr_sim = df['paddleocr_similarity']
+    
+    # Общее количество наблюдений для каждого фреймворка
+    total_easyocr = len(easyocr_sim)
+    total_trocr = len(trocr_sim)
+    total_paddleocr = len(paddleocr_sim)
    
     # Настройки гистограммы
-    bins = np.linspace(0, 1, 7)  # 20 корзин от 0 до 1
+    bins = np.linspace(0, 1, 7)  # 6 корзин от 0 до 1
     alpha = 0.9
-    bar_width = 0.33  # Ширина столбца
+    bar_width = 0.25  # Ширина столбца
     
     # Создаем массив позиций для столбцов
     x = np.arange(len(bins)-1)
     
-    # Построение гистограмм со смещением
-    plt.bar(x - bar_width, np.histogram(easyocr_sim, bins=bins)[0], 
+    # Функция для расчета процентов
+    def get_percentages(data, total):
+        counts, _ = np.histogram(data, bins=bins)
+        return (counts / total) * 100
+    
+    # Построение гистограмм со смещением (в процентах)
+    plt.bar(x - bar_width, get_percentages(easyocr_sim, total_easyocr), 
             width=bar_width, alpha=alpha, color="#0eff5e94", label='EasyOCR')
     
-    plt.bar(x, np.histogram(trocr_sim, bins=bins)[0], 
+    plt.bar(x, get_percentages(trocr_sim, total_trocr), 
             width=bar_width, alpha=alpha, color='#DD8452', label='TrOCR')
     
-    plt.bar(x + bar_width, np.histogram(paddleocr_sim, bins=bins)[0], 
+    plt.bar(x + bar_width, get_percentages(paddleocr_sim, total_paddleocr), 
             width=bar_width, alpha=alpha, color='#4C72B0', label='PaddleOCR')
         
     # Настройка осей и подписей
     plt.xticks(x, [f"{bins[i]:.1f}-{bins[i+1]:.1f}" for i in range(len(bins)-1)], rotation=45)
     
     # Настройка графика
-    plt.title('Распределение схожести распознавания текста', fontsize=14)
-    plt.xlabel('Диапазон схожести (через расстояние Левенштейна)', fontsize=12)
-    plt.ylabel('Количество распознаваний', fontsize=12)
+    plt.title('Распределение схожести распознавания текста относительно общего количества полей', fontsize=14)
+    plt.xlabel('Схожесть (через расстояние Левенштейна)', fontsize=12)
+    plt.ylabel('Количество полей, %', fontsize=12)
     plt.legend(loc='upper left', fontsize=12)
     plt.grid(True, linestyle='--', alpha=0.7, axis='y')
+    
+    # Добавляем процентные значения на столбцы
+    for i in range(len(bins)-1):
+        plt.text(x[i] - bar_width, get_percentages(easyocr_sim, total_easyocr)[i] + 1, 
+                f"{get_percentages(easyocr_sim, total_easyocr)[i]:.1f}%", 
+                ha='center', fontsize=8)
+        plt.text(x[i], get_percentages(trocr_sim, total_trocr)[i] + 1, 
+                f"{get_percentages(trocr_sim, total_trocr)[i]:.1f}%", 
+                ha='center', fontsize=8)
+        plt.text(x[i] + bar_width, get_percentages(paddleocr_sim, total_paddleocr)[i] + 1, 
+                f"{get_percentages(paddleocr_sim, total_paddleocr)[i]:.1f}%", 
+                ha='center', fontsize=8)
     
     # Улучшаем читаемость
     plt.tight_layout()
     
     # Сохранение графика
-    output_path = OUTPUT_DIR / 'similarity_distribution.png'
+    output_path = OUTPUT_DIR / 'similarity_distribution_percentage.png'
     plt.savefig(output_path, dpi=300, bbox_inches='tight')
     plt.close()
 

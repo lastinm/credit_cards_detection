@@ -285,7 +285,7 @@ def plot_similarity_histogram_заслоняют():
     plt.hist(paddleocr_sim, bins=bins, alpha=alpha, color="#3eff0e", label='PaddleOCR')
 
     # Построение гистограммы для Ensemble
-    plt.hist(ensemble_sim_sim, bins=bins, alpha=alpha, color="#ff0e0e", label='PaddleOCR')
+    plt.hist(ensemble_sim, bins=bins, alpha=alpha, color="#ff0e0e", label='PaddleOCR')
 
     # Настройка графика
     plt.title('Распределение схожести распознавания текста', fontsize=14)
