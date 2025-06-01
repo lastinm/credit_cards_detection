@@ -15,17 +15,17 @@ def plot_frameworks_comparison(df):
     # Преобразуем булевы значения в числовые (1=True, 0=False)
     df['easyocr'] = df['easyocr_exact_match'].astype(int)
     df['trocr'] = df['trocr_exact_match'].astype(int)
-    
+    df['paddleocr'] = df['paddleocr_exact_match'].astype(int)
     # Создаем фигуру с двумя субплoтами
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 10), 
                                   gridspec_kw={'height_ratios': [2, 1]})
     
     # Гистограмма (верхний график)
     bins = np.linspace(0, 1, 11)  # 10 bins от 0 до 1
-    ax1.hist([df['easyocr'], df['trocr']], 
+    ax1.hist([df['easyocr'], df['trocr'], df['paddleocr']],
              bins=bins,
-             label=['EasyOCR', 'TrOCR'],
-             color=['#1f77b4', '#ff7f0e'],
+             label=['EasyOCR', 'TrOCR', 'PaddleOCR'],
+             color=['#1f77b4', '#ff7f0e', '#3eff0e'],
              alpha=0.7,
              edgecolor='black')
     
@@ -37,8 +37,8 @@ def plot_frameworks_comparison(df):
     
     # Ящики с усами (нижний график)
     boxprops = {'facecolor': 'lightgray', 'alpha': 0.7}
-    ax2.boxplot([df['easyocr'], df['trocr']],
-                labels=['EasyOCR', 'TrOCR'],
+    ax2.boxplot([df['easyocr'], df['trocr'], df['paddleocr']],
+                labels=['EasyOCR', 'TrOCR', 'PaddleOCR'],
                 patch_artist=True,
                 widths=0.6,
                 showmeans=True,

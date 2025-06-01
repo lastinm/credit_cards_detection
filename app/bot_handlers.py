@@ -425,16 +425,15 @@ async def ensemble_OCR(message: types.Message, bot: Bot):
     sent_count = 0
     # try:
     for image_file, class_name, confidence in image_files:
-        #logging.INFO(f"Передаем в KerasOCR файл: {image_file.name}.")
         try:
-            if class_name == 'CardNumber':
-                full_text, confidences = paddleocr.recognize_images_in_directory(image_file)
+            if class_name == 'DateExpired':
+                outputs, processor = trocr.recognize_images_in_directory(image_file)
+                full_text, confidences = trocr.get_text_with_confidence(outputs, processor)
 
                 print("Подготавливаем результаты")
                 await message.answer(f"\'{full_text}\' (уверенность: {confidences:.3f})")
             else:
-                outputs, processor = trocr.recognize_images_in_directory(image_file)
-                full_text, confidences = trocr.get_text_with_confidence(outputs, processor)
+                full_text, confidences = paddleocr.recognize_images_in_directory(image_file)
 
                 print("Подготавливаем результаты")
                 await message.answer(f"\'{full_text}\' (уверенность: {confidences:.3f})")

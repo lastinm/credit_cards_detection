@@ -12,23 +12,23 @@ BOXPLOT_FILE = 'CardHolder_comparison_boxplot.png'
 def generate_comparison_boxplot(df):
     """Генерирует сравнение двух фреймворков для номера карты"""
     # Фильтруем только записи для CardHolder
-    cardnumber_data = df[df['field_type'] == 'CardHolder'].copy()
+    cardholder_data = df[df['field_type'] == 'CardHolder'].copy()
     
-    if len(cardnumber_data) == 0:
+    if len(cardholder_data) == 0:
         raise ValueError("Нет данных для field_type = 'CardHolder'")
     
     # Подготовка данных
     frameworks = {
-        'EasyOCR': pd.to_numeric(cardnumber_data['easyocr_similarity']), 
-        'TrOCR': pd.to_numeric(cardnumber_data['trocr_similarity'])
+        'TrOCR': pd.to_numeric(cardholder_data['trocr_similarity']),
+        'PaddleOCR': pd.to_numeric(cardholder_data['paddleocr_similarity']) 
     }
     
     # Удаление NaN значений
     frameworks = {k: v.dropna() for k, v in frameworks.items()}
     
     # Статистические тесты
-    t_stat, t_p = ttest_ind(frameworks['EasyOCR'], frameworks['TrOCR'])
-    u_stat, u_p = mannwhitneyu(frameworks['EasyOCR'], frameworks['TrOCR'])
+    t_stat, t_p = ttest_ind(frameworks['PaddleOCR'], frameworks['TrOCR'])
+    u_stat, u_p = mannwhitneyu(frameworks['PaddleOCR'], frameworks['TrOCR'])
     
     # Создание фигуры
     plt.figure(figsize=(14, 8))
@@ -47,7 +47,7 @@ def generate_comparison_boxplot(df):
     )
     
     # Настройка цветов
-    colors = ['#4C72B0', '#DD8452']
+    colors = ['#DD8452', '#4C72B0']
     for patch, color in zip(bp['boxes'], colors):
         patch.set(facecolor=color, alpha=0.8, linewidth=2)
     
@@ -86,7 +86,7 @@ def generate_comparison_boxplot(df):
         f"Статистические тесты:\n"
         f"  t-тест: p = {t_p:.4f}\n"
         f"  U-тест: p = {u_p:.4f}\n"
-        f"  Разница средних: {frameworks['TrOCR'].mean()-frameworks['EasyOCR'].mean():.3f}"
+        f"  Разница средних: {frameworks['PaddleOCR'].mean()-frameworks['TrOCR'].mean():.2f}"
     )
     
     # Позиционирование текста по центру справа от графиков
@@ -98,7 +98,7 @@ def generate_comparison_boxplot(df):
     
     # Добавление звездочек значимости (обновленные координаты)
     if u_p < 0.05:
-        y_pos = max(frameworks['EasyOCR'].max(), frameworks['TrOCR'].max()) + 0.07
+        y_pos = max(frameworks['PaddleOCR'].max(), frameworks['TrOCR'].max()) + 0.07
         plt.plot([1, 2], [y_pos, y_pos], 'k-', lw=1.5)
         plt.text(1.5, y_pos+0.02, 
                 '***' if u_p < 0.001 else '**' if u_p < 0.01 else '*',
@@ -107,7 +107,7 @@ def generate_comparison_boxplot(df):
     # Добавление легенды
     from matplotlib.lines import Line2D
     legend_elements = [
-        Line2D([0], [0], color=colors[0], lw=8, label='EasyOCR'),
+        Line2D([0], [0], color=colors[0], lw=8, label='PaddleOCR'),
         Line2D([0], [0], color=colors[1], lw=8, label='TrOCR'),
         Line2D([0], [0], marker='D', color='w', label='Среднее',
                markerfacecolor='black', markersize=10),

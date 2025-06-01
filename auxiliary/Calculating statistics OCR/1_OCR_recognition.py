@@ -55,9 +55,12 @@ DIGIT_TOKEN_IDS = {
     if token.isdigit() or token in ['', '</s>', '<s>', '<pad>']
 }
 
+# Функция принимает текст, делает его заглавным, удаляет лишние пробелы и объединяет слова в одну строку без пробелов. 
+# Например, если в качестве text передать строку ' Привет мир ', результатом будет 'ПРИВЕТМИР'
 def normalize_text(text):
     """Нормализация текста для сравнения"""
     return ''.join(str(text).upper().split())
+
 
 def calculate_metrics(pred_text, true_text):
     """Безопасный расчет метрик"""
@@ -169,7 +172,7 @@ def recognize_with_easyocr(image, coords, field_type):
             cropped = cv2.resize(cropped, None, fx=2, fy=1, interpolation=cv2.INTER_CUBIC)
         
         result = easyocr_reader.readtext(cropped, **config, detail=0)
-        return ' '.join(result) if result else ''
+        return ' '.join(result).replace(",","") if result else ''
     except Exception as e:
         print(f"EasyOCR error ({field_type}): {str(e)}")
         return ""
@@ -204,15 +207,15 @@ def recognize_cardnumber_with_trocr(image, coords):
     
 # В функции recognize_with_trocr заменяем обработку CardNumber:
 def recognize_with_trocr(image, coords, field_type):
-    if field_type == "CardNumber":
-        return recognize_cardnumber_with_trocr(image, coords)
+    # if field_type == "CardNumber":
+    #     return recognize_cardnumber_with_trocr(image, coords)
     # Остальная обработка других полей...
     try:
         x1, y1, x2, y2 = map(int, coords)
         cropped = image.crop((x1, y1, x2, y2))
         pixel_values = trocr_processor(cropped, return_tensors="pt").pixel_values.to(DEVICE)
         generated_ids = trocr_model.generate(pixel_values)
-        return trocr_processor.batch_decode(generated_ids, skip_special_tokens=True)[0]
+        return trocr_processor.batch_decode(generated_ids, skip_special_tokens=True)[0].replace(",","")
     except Exception as e:
         print(f"TrOCR error: {str(e)}")
         return ""
@@ -233,7 +236,7 @@ def recognize_with_paddleocr(image, coords):
         # Удаляем временный файл
         os.unlink(temp_path)
 
-        return results[0]['rec_text']
+        return results[0]['rec_text'].replace(",","")
     except Exception as e:
         print(f"PaddleOCR error: {str(e)}")
         return ""
@@ -253,7 +256,7 @@ def recognize_with_kerasocr(image, coords, field_type):
           
             # full_text = ' '.join(result_text)
             full_text = get_sorted_predictions(predictions)
-            return full_text
+            return full_text.replace(",","")
         else:
             return ""
     
@@ -262,18 +265,17 @@ def recognize_with_kerasocr(image, coords, field_type):
         return ""
 
 def recognize_with_ensemble(image, coords, field_type):
-    if field_type == "CardNumber":
-        return recognize_with_paddleocr(image, coords)
-    else:
+    if field_type == "DateExpired":
         return recognize_with_trocr(image, coords, field_type)
+    else:
+        return recognize_with_paddleocr(image, coords)
 
 def process_image(image_path, true_data):
     """Обработка одного изображения с полной обработкой ошибок"""
     try:
         # Получаем изображение и детекции
         image, detections = yolo_detect(image_path)
-        if image is None:
-            return []
+        if image is None:p
             
         results = []
         for det in detections:

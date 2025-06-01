@@ -14,24 +14,27 @@ from pathlib import Path
 
 ROOT_DIR = rf'/home/lastinm/PROJECTS/credit_cards_detection'
 OUTPUT_DIR = fr"{ROOT_DIR}/auxiliary/Calculating statistics OCR/top_fails"
+RESULTS_CSV = fr"{ROOT_DIR}/auxiliary/Calculating statistics OCR/results.csv"
 
+def normalize_text_word_accuracy(text, ignore_case=True, remove_spaces=False):
+    """Нормализация текста: приведение к нижнему регистру и удаление пробелов."""
+    return ''.join(str(text).upper().split())
 
 def normalize_text(text, ignore_case=True, remove_spaces=False):
     """Нормализация текста: приведение к нижнему регистру и удаление пробелов."""
-    # text = str(text)
-    # if ignore_case:
-    #     text = text.lower()
-    # if remove_spaces:
-    #     text = text.replace(" ", "")
-    # return text.strip()
-    return ''.join(str(text).upper().split())
+    text = str(text)
+    if ignore_case:
+        text = text.lower()
+    if remove_spaces:
+        text = text.replace(" ", "")
+    return text.strip()
 
-def calculate_metrics(true_texts, pred_texts, is_char_level=False, group_cols=None):
+def calculate_metrics(true_texts, pred_texts, is_char_level=False):
     """Вычисление метрик с гибридным сравнением."""
     # Word Accuracy (полное совпадение строк)
     word_accuracy = sum(
         1 for true, pred in zip(true_texts, pred_texts)
-        if normalize_text(true) == normalize_text(pred)
+        if normalize_text_word_accuracy(true) == normalize_text_word_accuracy(pred)
     ) / len(true_texts)
 
     # Инициализация счетчиков
@@ -72,12 +75,11 @@ def calculate_metrics(true_texts, pred_texts, is_char_level=False, group_cols=No
     f1 = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0
 
     return {
-        "Word Accuracy": round(word_accuracy, 3),
-        "Precision": round(precision,3),
-        "Recall": round(recall,3),
-        "F1-Score": round(f1,3)
+        "Word Accuracy": round(word_accuracy, 2),
+        "Precision": round(precision,2),
+        "Recall": round(recall,2),
+        "F1-Score": round(f1,2)
     }
-
 
 def calculate_metrics_with_ci(true_texts, pred_texts, is_char_level=False, confidence=0.95, n_bootstrap=1000):
     """Расчет метрик с корректными доверительными интервалами"""
@@ -85,7 +87,7 @@ def calculate_metrics_with_ci(true_texts, pred_texts, is_char_level=False, confi
     
     # Word Accuracy (биномиальный интервал)
     correct = sum(1 for true, pred in zip(true_texts, pred_texts) 
-                if normalize_text(true) == normalize_text(pred))
+                if normalize_text_word_accuracy(true) == normalize_text_word_accuracy(pred))
     word_acc = correct / n   
     word_acc_ci = stats.binomtest(correct, n).proportion_ci(confidence_level=confidence)
     
@@ -156,12 +158,11 @@ def calculate_metrics_with_ci(true_texts, pred_texts, is_char_level=False, confi
     recall_ci = proportion_confint(tp, tp+fn, alpha=1-confidence, method='wilson') if (tp+fn) > 0 else (0, 1)
     
     return {
-        "Word Accuracy": (round(word_acc,3), word_acc_ci),
-        "Precision": (round(precision,3), precision_ci),
-        "Recall": (round(recall,3), recall_ci),
-        "F1-Score": (round(f1,3), f1_ci)
+        "Word Accuracy": (round(word_acc,2), word_acc_ci),
+        "Precision": (round(precision,2), precision_ci),
+        "Recall": (round(recall,2), recall_ci),
+        "F1-Score": (round(f1,2), f1_ci)
     }
-
 # Анализ с доверительными интервалами
 def analyze_with_scipy_ci(df, field_types, confidence=0.95):
     results = []
@@ -194,8 +195,19 @@ def analyze_with_scipy_ci(df, field_types, confidence=0.95):
             confidence
         )
 
+        # Ensemble
+        ensemble_metrics = calculate_metrics_with_ci(
+            true_texts,
+            subset["ensemble_text"].tolist(),
+            params["is_char_level"],
+            confidence
+        )
+
         # Сохранение результатов
-        for model, metrics in [("EasyOCR", easyocr_metrics), ("TrOCR", trocr_metrics), ("PaddleOCR", paddleocr_metrics)]:
+        for model, metrics in [("EasyOCR", easyocr_metrics), 
+                               ("TrOCR", trocr_metrics),
+                                ("PaddleOCR", paddleocr_metrics),
+                                ("Ensemble", ensemble_metrics)]:
             for metric, (value, (ci_lower, ci_upper)) in metrics.items():
                 results.append({
                     "Field": field,
@@ -208,99 +220,83 @@ def analyze_with_scipy_ci(df, field_types, confidence=0.95):
     
     return pd.DataFrame(results)
 
-
-def main():
-    # Загрузка данных
-    df = pd.read_csv("results.csv")
-    field_types = {
-        "CardHolder": {"is_char_level": False},
-        "CardNumber": {"is_char_level": True},
-        "DateExpired": {"is_char_level": True}
-    }
-    results = []
-
-    for field, params in field_types.items():
-        subset = df[df["field_type"] == field]
-        
-        # EasyOCR
-        easyocr_metrics = calculate_metrics(
-            # df,
-            # "easyocr_exact_match",
-            subset["true_text"].tolist(),
-            subset["easyocr_text"].tolist(),
-            **params
-        )
-        easyocr_metrics.update({"Model": "EasyOCR", "Field": field})
-        
-        # TrOCR
-        trocr_metrics = calculate_metrics(
-            # df,
-            # "trocr_exact_match",
-            # field,
-            subset["true_text"].tolist(),
-            subset["trocr_text"].tolist(),
-            **params
-        )
-        trocr_metrics.update({"Model": "TrOCR", "Field": field})
-
-        # PaddleOCR
-        paddleocr_metrics = calculate_metrics(
-            # df,
-            # "paddleocr_exact_match",
-            # field,
-            subset["true_text"].tolist(),
-            subset["paddleocr_text"].tolist(),
-            **params
-        )
-        paddleocr_metrics.update({"Model": "PaddleOCR", "Field": field})
-        
-        results.extend([easyocr_metrics, trocr_metrics, paddleocr_metrics])
-
-    # Результаты
-    results_df = pd.DataFrame(results)
-    new_order = ['Field', 'Model', 'Word Accuracy', 'Precision', 'Recall', 'F1-Score']
-    results_df = results_df[new_order]
+def print_results_with_totals(results_df, ci_results):
+    """Выводит результаты с итоговыми значениями по каждой библиотеке"""
+    
+    # Вывод детализированных результатов по классам
+    print("\nДетализированные результаты по классам:")
     print(results_df.to_markdown(index=False))
-
-    # metrics = ["Word Accuracy", "Precision", "Recall", "F1-Score"]
-    # fig, axes = plt.subplots(2, 2, figsize=(14, 10))
-    # for i, metric in enumerate(metrics):
-    #     ax = axes[i//2, i%2]
-    #     results_df.pivot(index="Field", columns="Model", values=metric).plot(kind="bar", ax=ax)
-    #     ax.set_title(metric)
-    #     ax.set_ylim(0, 1.1)
-    # plt.tight_layout()
-    # plt.savefig("ocr_metrics_comparison.png")  # Сохраняем график
-
-    # Запуск анализа
-    ci_results = analyze_with_scipy_ci(df, field_types)
-
-    # Красивое отображение результатов
-    def format_ci(row):
-        return f"{row['Value']:.3f} [{row['CI Lower']:.3f}, {row['CI Upper']:.3f}]"
-
-    ci_results["Value (95% CI)"] = ci_results.apply(format_ci, axis=1)
-    pivot_results = ci_results.pivot_table(
-        index=["Field", "Model"],
-        columns="Metric",
-        values="Value (95% CI)",
-        aggfunc="first"
-    )
-
-    # Применяем новый порядок (с проверкой наличия столбцов)
-    pivot_results = pivot_results.reindex(
-        columns=[col for col in new_order if col in pivot_results.columns]
-    )
-
-    print("\nРезультаты с доверительными интервалами (95%):")
-    print(pivot_results.to_markdown())
-
-    # Записываем результаты в файл
-    output_dir = Path(OUTPUT_DIR)
-    with open(output_dir / 'ci_metrics_3_ocr.txt', 'w') as f:
-        f.write("Результаты с доверительными интервалами (95%):\n\n")
-        f.write(pivot_results.to_markdown())   
+    
+    # Расчет итоговых значений (среднее взвешенное по количеству примеров)
+    metrics = ["Word Accuracy", "Precision", "Recall", "F1-Score"]
+    libraries = results_df['Model'].unique()
+    
+    # Подготовка данных для итогов
+    totals = []
+    for lib in libraries:
+        lib_data = results_df[results_df['Model'] == lib]
+        total_count = len(lib_data)  # Или используйте реальное количество примеров, если доступно
+        
+        # Рассчитываем среднее по всем классам
+        lib_totals = {
+            'Model': f"{lib} (Итог)",
+            'Field': 'Все поля'
+        }
+        
+        for metric in metrics:
+            lib_totals[metric] = round(lib_data[metric].mean(), 2)
             
+        totals.append(lib_totals)
+    
+    # Создаем DataFrame с итогами
+    totals_df = pd.DataFrame(totals)
+    
+    # Выводим итоговые значения
+    print("\nИтоговые значения по библиотекам:")
+    print(totals_df.to_markdown(index=False)) 
+
+    # Для результатов с доверительными интервалами
+    if ci_results is not None:
+        print("\nРезультаты с доверительными интервалами (95%):")
+        print(ci_results.to_markdown())
+        
+        # Итоги для доверительных интервалов
+        ci_totals = []
+        for lib in libraries:
+            lib_data = ci_results[ci_results['Model'] == lib]
+            
+            # Формируем строку с итогами
+            ci_totals.append({
+                'Model': f"{lib} (Итог)",
+                'Field': 'Все поля',
+                'Word Accuracy': format_metric_with_ci(lib_data, 'Word Accuracy'),
+                'Precision': format_metric_with_ci(lib_data, 'Precision'),
+                'Recall': format_metric_with_ci(lib_data, 'Recall'),
+                'F1-Score': format_metric_with_ci(lib_data, 'F1-Score')
+            })
+        
+        ci_totals_df = pd.DataFrame(ci_totals)
+        print("\nИтоговые значения с доверительными интервалами:")
+        print(ci_totals_df.to_markdown(index=False))
+        
+        # Записываем результаты в файл
+        output_dir = Path(OUTPUT_DIR)
+        with open(output_dir / 'ci_metrics_ocr_total_ci.txt', 'w') as f:
+            f.write("Результаты с доверительными интервалами (95%):\n\n")
+            f.write(ci_totals_df.to_markdown()) 
+
+def format_metric_with_ci(df, metric):
+    """Форматирует метрику с доверительным интервалом"""
+    values = df[df['Metric'] == metric]
+    if len(values) == 0:
+        return "N/A"
+    
+    mean_val = values['Value'].mean()
+    ci_lower = values['CI Lower'].mean()
+    ci_upper = values['CI Upper'].mean()
+    return f"{mean_val:.2f} [{ci_lower:.2f}, {ci_upper:.2f}]"
+
+def visualise(ci_results, field_types):            
     # Визуализация с интервалами (исправленная версия)
     metrics = ["Word Accuracy", "Precision", "Recall", "F1-Score"]
     fig, axes = plt.subplots(2, 2, figsize=(16, 12))
@@ -314,7 +310,7 @@ def main():
         width = 0.35
         
         # Построение для каждой модели
-        for j, model in enumerate(["EasyOCR", "TrOCR", "PaddleOCR"]):
+        for j, model in enumerate(["EasyOCR", "TrOCR", "PaddleOCR", "Ensemble"]):
             model_data = plot_data[plot_data["Model"] == model]
             values = model_data["Value"].values
             ci_lower = model_data["CI Lower"].values
@@ -356,6 +352,86 @@ def main():
     plt.tight_layout()
     plt.savefig("ocr_metrics_with_ci.png", dpi=300, bbox_inches='tight')
 
+
+def main():
+    # Загрузка данных
+    df = pd.read_csv(RESULTS_CSV)
+    field_types = {
+        "CardHolder": {"is_char_level": False},
+        "CardNumber": {"is_char_level": True},
+        "DateExpired": {"is_char_level": True}
+    }
+    results = []
+
+    for field, params in field_types.items():
+        subset = df[df["field_type"] == field]
+        
+        # EasyOCR
+        easyocr_metrics = calculate_metrics(
+            subset["true_text"].tolist(),
+            subset["easyocr_text"].tolist(),
+            **params
+        )
+        easyocr_metrics.update({"Model": "EasyOCR", "Field": field})
+        
+        # TrOCR
+        trocr_metrics = calculate_metrics(
+            subset["true_text"].tolist(),
+            subset["trocr_text"].tolist(),
+            **params
+        )
+        trocr_metrics.update({"Model": "TrOCR", "Field": field})
+
+        # PaddleOCR
+        paddleocr_metrics = calculate_metrics(
+            subset["true_text"].tolist(),
+            subset["paddleocr_text"].tolist(),
+            **params
+        )
+        paddleocr_metrics.update({"Model": "PaddleOCR", "Field": field})
+
+        # Ensemble
+        ensemble_metrics = calculate_metrics(
+            subset["true_text"].tolist(),
+            subset["ensemble_text"].tolist(),
+            **params
+        )
+        ensemble_metrics.update({"Model": "Ensemble", "Field": field})
+        
+        # Модифицированный вывод результатов
+        
+        results.extend([easyocr_metrics, trocr_metrics, paddleocr_metrics, ensemble_metrics])
+    
+    results_df = pd.DataFrame(results)
+    new_order = ['Field', 'Model', 'Word Accuracy', 'Precision', 'Recall', 'F1-Score']
+    results_df = results_df[new_order]
+
+    # Запуск анализа с доверительными интервалами
+    ci_results = analyze_with_scipy_ci(df, field_types)
+
+    # Красивое отображение результатов
+    def format_ci(row):
+        return f"{row['Value']:.2f} [{row['CI Lower']:.2f}, {row['CI Upper']:.2f}]"
+
+    ci_results["Value (95% CI)"] = ci_results.apply(format_ci, axis=1)
+    pivot_results = ci_results.pivot_table(
+        index=["Field", "Model"],
+        columns="Metric",
+        values="Value (95% CI)",
+        aggfunc="first"
+    )
+
+    # Выводим результаты с итогами
+    print_results_with_totals(results_df, ci_results)
+
+    print(pivot_results.to_markdown()) 
+    # Записываем результаты в файл
+    output_dir = Path(OUTPUT_DIR)
+    with open(output_dir / 'ci_metrics_3_ocr.txt', 'w') as f:
+        f.write("Результаты с доверительными интервалами (95%):\n\n")
+        f.write(pivot_results.to_markdown()) 
+
+    #visualise(ci_results, field_types  
 
 if __name__== "__main__":
     main()

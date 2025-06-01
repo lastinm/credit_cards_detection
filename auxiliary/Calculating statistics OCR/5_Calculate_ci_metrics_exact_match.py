@@ -7,11 +7,12 @@ import seaborn as sns
 from scipy import stats
 from pathlib import Path
 
+
 # Конфигурация
 INPUT_CSV = 'results.csv'
 OUTPUT_FILE = 'ocr_ci_metrics.txt'
 ALPHA = 0.05
-
+FRAMEWORKS = ['easyocr', 'trocr', 'paddleocr']
 
 def calculate_ci(df, metric_col, group_cols=None):
     """Вычисляет доверительные интервалы"""
@@ -65,19 +66,19 @@ def save_ci_metrics():
     with open(OUTPUT_FILE, 'w') as f:
         f.write("=== Доверительные интервалы точности (95% CI) ===\n\n")
                
-        for framework in ['easyocr', 'trocr']:
+        for framework in FRAMEWORKS:
             f.write(f"Фреймворк: {framework.upper()}\n")
             
             framework_df = calculate_ci(df, f'{framework}_exact_match')
-            f.write(f"Общая точность: {framework_df['accuracy'].iloc[0]:.3f} ")
-            f.write(f"[{framework_df['ci_lower'].iloc[0]:.3f}, {framework_df['ci_upper'].iloc[0]:.3f}]\n")
+            f.write(f"Общая точность: {framework_df['accuracy'].iloc[0]:.2f} ")
+            f.write(f"[{framework_df['ci_lower'].iloc[0]:.2f}, {framework_df['ci_upper'].iloc[0]:.2f}]\n")
             f.write(f"Объём выборки: {framework_df['n'].iloc[0]}\n\n")
             
             class_ci = calculate_ci(df, f'{framework}_exact_match', ['field_type'])
             for _, row in class_ci.iterrows():
                 f.write(f"  Класс {row['group']}:\n")
-                f.write(f"    Точность: {row['accuracy']:.3f} ")
-                f.write(f"[{row['ci_lower']:.3f}, {row['ci_upper']:.3f}]\n")
+                f.write(f"    Точность: {row['accuracy']:.2f} ")
+                f.write(f"[{row['ci_lower']:.2f}, {row['ci_upper']:.2f}]\n")
                 f.write(f"    Объём выборки: {row['n']}\n")
             
             f.write("\n" + "="*50 + "\n\n")

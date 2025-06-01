@@ -95,8 +95,16 @@ for field, params in field_types.items():
         **params
     )
     trocr_metrics.update({"Model": "TrOCR", "Field": field})
+
+    # PaddleOCR
+    paddleocr_metrics = calculate_metrics(
+        subset["true_text"].tolist(),
+        subset["paddleocr_text"].tolist(),
+        **params
+    )
+    paddleocr_metrics.update({"Model": "PaddleOCR", "Field": field})
     
-    results.extend([easyocr_metrics, trocr_metrics])
+    results.extend([easyocr_metrics, trocr_metrics, paddleocr_metrics])
 
 # Результаты
 results_df = pd.DataFrame(results)
