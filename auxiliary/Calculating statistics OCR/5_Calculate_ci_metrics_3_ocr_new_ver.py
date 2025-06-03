@@ -334,24 +334,24 @@ def main():
                 yerr_lower = np.nan_to_num(yerr_lower)
                 yerr_upper = np.nan_to_num(yerr_upper)
             
-            # Построение графика
-            bars = ax.bar(x + j*width, values, width, label=model)
-            ax.errorbar(
-                x + j*width, 
-                values,
-                yerr=[yerr_lower, yerr_upper],
-                fmt='none', 
-                color='black', 
-                capsize=5,
-                elinewidth=1.5
-            )
-        
-        ax.set_title(f"{metric} с 95% ДИ", fontsize=12)
-        ax.set_xticks(x + width/2)
-        ax.set_xticklabels(field_types.keys(), fontsize=10)
-        ax.set_ylim(0, 1.15)
-        ax.grid(True, linestyle='--', alpha=0.3)
-        ax.legend(fontsize=10)
+    # Построение графика
+    bars = ax.bar(x + j*width, values, width, label=model)
+    ax.errorbar(
+        x + j*width, 
+        values,
+        yerr=[yerr_lower, yerr_upper],
+        fmt='none', 
+        color='black', 
+        capsize=5,
+        elinewidth=1.5
+    )
+    
+    ax.set_title(f"{metric} с 95% ДИ", fontsize=12)
+    ax.set_xticks(x + width/2)
+    ax.set_xticklabels(field_types.keys(), fontsize=10)
+    ax.set_ylim(0, 1.15)
+    ax.grid(True, linestyle='--', alpha=0.3)
+    ax.legend(fontsize=10)
 
     plt.tight_layout()
     plt.savefig("ocr_metrics_with_ci.png", dpi=300, bbox_inches='tight')

@@ -290,13 +290,13 @@ def plot_similarity_histogram():
             width=bar_width, alpha=alpha, color='#4C72B0', label='PaddleOCR')
         
     # Настройка осей и подписей
-    plt.xticks(x, [f"{bins[i]:.1f}-{bins[i+1]:.1f}" for i in range(len(bins)-1)], rotation=45)
+    plt.xticks(x, [f"{bins[i]:.1f}-{bins[i+1]:.1f}" for i in range(len(bins)-1)], rotation=0)
     
     # Настройка графика
-    plt.title('Распределение схожести распознавания текста', fontsize=14)
-    plt.xlabel('Диапазон схожести (через расстояние Левенштейна)', fontsize=12)
-    plt.ylabel('Количество распознаваний', fontsize=12)
-    plt.legend(loc='upper left', fontsize=12)
+    plt.title('Распределение схожести распознавания текста', fontsize=18)
+    plt.xlabel('Диапазон схожести (через расстояние Левенштейна)', fontsize=16)
+    plt.ylabel('Количество распознаваний', fontsize=16)
+    plt.legend(loc='upper left', fontsize=16)
     plt.grid(True, linestyle='--', alpha=0.7, axis='y')
     
     # Улучшаем читаемость

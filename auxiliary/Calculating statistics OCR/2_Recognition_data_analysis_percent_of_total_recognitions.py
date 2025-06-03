@@ -3,6 +3,7 @@
 # 2. Топ-10 ошибок для каждого класса. Пишем в файл top_fails/top10_errors.txt
 # 3. Анализ условно точных совпадений. Пишем в файл top_fails/problem_accuracy.txt
 # 4. Сохранение изображений для Топ-10 ошибочных распознаваний по каждому фреймворку и классу. Путь сохранения top_fails/
+# 5. Рисует гистограмму схожести относительно общего количества распознаваний (%%) - similarity_distribution_percentage.png
 
 import os
 import pandas as pd
@@ -300,26 +301,28 @@ def plot_similarity_histogram():
             width=bar_width, alpha=alpha, color='#4C72B0', label='PaddleOCR')
         
     # Настройка осей и подписей
-    plt.xticks(x, [f"{bins[i]:.1f}-{bins[i+1]:.1f}" for i in range(len(bins)-1)], rotation=45)
+    plt.xticks(x, [f"{bins[i]:.1f}-{bins[i+1]:.1f}" for i in range(len(bins)-1)], rotation=0,fontsize=16)
     
     # Настройка графика
-    plt.title('Распределение схожести распознавания текста относительно общего количества полей', fontsize=14)
-    plt.xlabel('Схожесть (через расстояние Левенштейна)', fontsize=12)
-    plt.ylabel('Количество полей, %', fontsize=12)
-    plt.legend(loc='upper left', fontsize=12)
+    plt.title('Распределение схожести распознавания текста относительно количества полей', fontsize=20)
+    plt.xlabel('Схожесть (через расстояние Левенштейна)', fontsize=20)
+    plt.ylabel('Количество полей, %', fontsize=20)
+    plt.legend(loc='upper left', fontsize=20)
     plt.grid(True, linestyle='--', alpha=0.7, axis='y')
+    # Увеличиваем шрифт делений на оси Y
+    plt.yticks(fontsize=16)
     
     # Добавляем процентные значения на столбцы
     for i in range(len(bins)-1):
         plt.text(x[i] - bar_width, get_percentages(easyocr_sim, total_easyocr)[i] + 1, 
-                f"{get_percentages(easyocr_sim, total_easyocr)[i]:.1f}%", 
-                ha='center', fontsize=8)
+                f"{get_percentages(easyocr_sim, total_easyocr)[i]:.0f}%", 
+                ha='center', fontsize=14)
         plt.text(x[i], get_percentages(trocr_sim, total_trocr)[i] + 1, 
-                f"{get_percentages(trocr_sim, total_trocr)[i]:.1f}%", 
-                ha='center', fontsize=8)
+                f"{get_percentages(trocr_sim, total_trocr)[i]:.0f}%", 
+                ha='center', fontsize=14)
         plt.text(x[i] + bar_width, get_percentages(paddleocr_sim, total_paddleocr)[i] + 1, 
-                f"{get_percentages(paddleocr_sim, total_paddleocr)[i]:.1f}%", 
-                ha='center', fontsize=8)
+                f"{get_percentages(paddleocr_sim, total_paddleocr)[i]:.0f}%", 
+                ha='center', fontsize=14)
     
     # Улучшаем читаемость
     plt.tight_layout()

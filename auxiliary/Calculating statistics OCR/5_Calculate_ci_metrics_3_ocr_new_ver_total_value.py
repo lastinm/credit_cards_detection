@@ -170,7 +170,15 @@ def analyze_with_scipy_ci(df, field_types, confidence=0.95):
     for field, params in field_types.items():
         subset = df[df["field_type"] == field]
         true_texts = subset["true_text"].tolist()
-        
+
+        # KerasOCR
+        kerasocr_metrics = calculate_metrics_with_ci(
+            true_texts,
+            subset["kerasocr_text"].tolist(),
+            params["is_char_level"],
+            confidence
+        )
+
         # EasyOCR
         easyocr_metrics = calculate_metrics_with_ci(
             true_texts,
@@ -204,7 +212,8 @@ def analyze_with_scipy_ci(df, field_types, confidence=0.95):
         )
 
         # Сохранение результатов
-        for model, metrics in [("EasyOCR", easyocr_metrics), 
+        for model, metrics in [("KerasOCR", kerasocr_metrics),
+                                ("EasyOCR", easyocr_metrics), 
                                ("TrOCR", trocr_metrics),
                                 ("PaddleOCR", paddleocr_metrics),
                                 ("Ensemble", ensemble_metrics)]:
@@ -296,10 +305,12 @@ def format_metric_with_ci(df, metric):
     ci_upper = values['CI Upper'].mean()
     return f"{mean_val:.2f} [{ci_lower:.2f}, {ci_upper:.2f}]"
 
-def visualise(ci_results, field_types):            
+def visualise_four_metrics(ci_results, field_types):            
     # Визуализация с интервалами (исправленная версия)
+    #metrics = ["Word Accuracy", "F1-Score"]
     metrics = ["Word Accuracy", "Precision", "Recall", "F1-Score"]
-    fig, axes = plt.subplots(2, 2, figsize=(16, 12))
+    fig, axes = plt.subplots(2, 2, figsize=(16, 12))    # на четыре метрики
+    #fig, axes = plt.subplots(1, 2, figsize=(16, 12))    # для двух метрик
 
     for i, metric in enumerate(metrics):
         ax = axes[i//2, i%2]
@@ -310,7 +321,7 @@ def visualise(ci_results, field_types):
         width = 0.35
         
         # Построение для каждой модели
-        for j, model in enumerate(["EasyOCR", "TrOCR", "PaddleOCR", "Ensemble"]):
+        for j, model in enumerate(["TrOCR", "PaddleOCR", "Ensemble"]):
             model_data = plot_data[plot_data["Model"] == model]
             values = model_data["Value"].values
             ci_lower = model_data["CI Lower"].values
@@ -341,7 +352,7 @@ def visualise(ci_results, field_types):
                 capsize=5,
                 elinewidth=1.5
             )
-        
+            
         ax.set_title(f"{metric} с 95% ДИ", fontsize=12)
         ax.set_xticks(x + width/2)
         ax.set_xticklabels(field_types.keys(), fontsize=10)
@@ -351,6 +362,225 @@ def visualise(ci_results, field_types):
 
     plt.tight_layout()
     plt.savefig("ocr_metrics_with_ci.png", dpi=300, bbox_inches='tight')
+
+
+def visualise_two_metrics(ci_results, field_types):
+    """Визуализация Word Accuracy и F1-Score с горизонтальными подписями"""
+    metrics = ["Word Accuracy", "F1-Score"]
+    
+    # Создаем фигуру с двумя графиками
+    fig, axes = plt.subplots(1, 2, figsize=(16, 6))
+    
+    # Цветовая схема для моделей
+    model_colors = {
+        "TrOCR": "#1f77b4",
+        "PaddleOCR": "#ff7f0e", 
+        "Ensemble": "#2ca02c"
+    }
+    
+    for i, metric in enumerate(metrics):
+        ax = axes[i]
+        
+        # Фильтруем данные по метрике
+        plot_data = ci_results[ci_results["Metric"] == metric]
+        x = np.arange(len(field_types))
+        width = 0.25  # Ширина столбцов
+        
+        # Строим для каждой модели
+        for j, model in enumerate(["TrOCR", "PaddleOCR", "Ensemble"]):
+            model_data = plot_data[plot_data["Model"] == model]
+            
+            if model_data.empty:
+                continue
+                
+            values = model_data["Value"].values
+            ci_lower = model_data["CI Lower"].values
+            ci_upper = model_data["CI Upper"].values
+            
+            # Рассчет ошибок
+            yerr = [
+                values - np.maximum(ci_lower, 0),
+                np.minimum(ci_upper, 1) - values
+            ]
+            
+            # Столбцы с цветами из схемы
+            bars = ax.bar(
+                x + j*width,
+                values,
+                width,
+                label=model,
+                color=model_colors[model],
+                alpha=0.8,
+                edgecolor='white',
+                linewidth=0.5
+            )
+            
+            # Доверительные интервалы
+            ax.errorbar(
+                x + j*width,
+                values,
+                yerr=yerr,
+                fmt='none',
+                color='black',
+                capsize=3,
+                elinewidth=1
+            )
+            
+            # Подписи значений
+            for bar in bars:
+                height = bar.get_height()
+                ax.text(
+                    bar.get_x() + bar.get_width()/2,
+                    height + 0.01,
+                    f'{height:.2f}',
+                    ha='center',
+                    va='bottom',
+                    fontsize=9
+                )
+        
+        # Оформление графиков
+        ax.set_title(metric, fontsize=14, pad=12)
+        ax.set_xticks(x + width)
+        ax.set_xticklabels(
+            field_types.keys(),
+            fontsize=11,
+            rotation=0  # Горизонтальные подписи
+        )
+        ax.set_ylim(0, 1.15)
+        ax.grid(axis='y', linestyle=':', alpha=0.4)
+        ax.legend(
+            loc='upper left',
+            fontsize=10,
+            framealpha=0.9
+        )
+        
+        # Подписи осей
+        ax.set_ylabel('Значение метрики', fontsize=11)
+        ax.set_xlabel('Тип поля', fontsize=11)
+
+    # Общее оформление
+    plt.tight_layout(pad=2.0)
+    plt.savefig(
+        "ocr_metrics_comparison.png",
+        dpi=300,
+        bbox_inches='tight',
+        facecolor='white'
+    )
+    plt.close()
+
+
+def visualize_four_metrics_aggregated(ci_results):
+    """
+    Визуализация 4 метрик в ряд с общими значениями для трёх моделей (без разбивки по полям)
+    
+    Параметры:
+    ci_results - DataFrame с результатами (должен содержать колонки: Metric, Model, Value, CI Lower, CI Upper)
+    """
+    metrics = ["Word Accuracy", "Precision", "Recall", "F1-Score"]
+    
+    # Настройка стиля (используем доступный стиль)
+    plt.style.use('ggplot')  # Альтернатива: 'seaborn-v0_8', 'seaborn', 'seaborn-poster'
+    
+    fig, axes = plt.subplots(1, 4, figsize=(16, 7))
+    
+    # Цвета для моделей
+    model_colors = {
+        "TrOCR": "#4C72B0", 
+        "PaddleOCR": "#DD8452",
+        "Ensemble": "#55A868"
+    }
+    
+    # Позиции для столбцов (только три модели)
+    x = np.arange(3)
+    bar_width = 0.8  # Увеличиваем ширину столбцов
+    
+    for i, metric in enumerate(metrics):
+        ax = axes[i]
+        metric_data = ci_results[ci_results["Metric"] == metric]
+        
+        # Агрегируем данные по моделям (среднее по всем полям)
+        aggregated = metric_data.groupby('Model').agg({
+            'Value': 'mean',
+            'CI Lower': 'mean',
+            'CI Upper': 'mean'
+        }).reindex(["TrOCR", "PaddleOCR", "Ensemble"])  # Гарантируем порядок
+        
+        values = aggregated['Value'].values
+        ci_lower = aggregated['CI Lower'].values
+        ci_upper = aggregated['CI Upper'].values
+        
+        # Строим столбцы
+        bars = ax.bar(
+            x,
+            values,
+            width=bar_width,  # Явно указываем ширину
+            color=[model_colors[model] for model in aggregated.index],
+            alpha=0.8,
+            edgecolor='white',
+            linewidth=1
+        )
+        
+        # Добавляем доверительные интервалы
+        ax.errorbar(
+            x,
+            values,
+            yerr=[values - ci_lower, ci_upper - values],
+            fmt='none',
+            color='black',
+            capsize=8,
+            elinewidth=1.5
+        )
+        
+        # Подписи значений на столбцах
+        for bar in bars:
+            height = bar.get_height()
+            ax.text(
+                bar.get_x() + bar.get_width()/2,
+                height + 0.1,
+                f'{height:.2f}',
+                ha='center',
+                va='bottom',
+                fontsize=10,
+                fontweight='bold'
+            )
+        
+        # Настройка осей и оформления
+        ax.set_title(metric, fontsize=14, pad=12, fontweight='bold')
+        ax.set_xticks(x)
+        ax.set_xticklabels(
+            aggregated.index,
+            fontsize=12,
+            rotation=0,
+            color='black'  # Черные подписи по оси X
+        )
+
+        # Делаем черными подписи значений по оси Y
+        ax.tick_params(axis='y', colors='black')
+
+        ax.set_ylim(0, 1.15)
+        ax.grid(axis='y', linestyle=':', alpha=0.4)
+        
+        # Убираем рамку
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+
+        # Делаем черными оставшиеся рамки (левую и нижнюю)
+        # for spine in ['left', 'bottom']:
+        #     ax.spines[spine].set_color('black')
+        
+        # Убираем промежутки между столбцами
+        ax.set_xlim(-0.5, 2.5)  # Устанавливаем границы, чтобы столбцы занимали всё пространство
+    
+    # Общее оформление
+    plt.suptitle("Сравнение моделей OCR по ключевым метрикам", fontsize=16, y=1.05)
+    plt.tight_layout(pad=2.0)
+    plt.savefig(
+        "ocr_models_comparison.png",
+        dpi=300,
+        bbox_inches='tight',
+        facecolor='white'
+    )
+    plt.close()
 
 
 def main():
@@ -366,6 +596,14 @@ def main():
     for field, params in field_types.items():
         subset = df[df["field_type"] == field]
         
+        # KerasOCR
+        kerasocr_metrics = calculate_metrics(
+            subset["true_text"].tolist(),
+            subset["kerasocr_text"].tolist(),
+            **params
+        )
+        kerasocr_metrics.update({"Model": "KerasOCR", "Field": field})
+
         # EasyOCR
         easyocr_metrics = calculate_metrics(
             subset["true_text"].tolist(),
@@ -400,7 +638,7 @@ def main():
         
         # Модифицированный вывод результатов
         
-        results.extend([easyocr_metrics, trocr_metrics, paddleocr_metrics, ensemble_metrics])
+        results.extend([kerasocr_metrics, easyocr_metrics, trocr_metrics, paddleocr_metrics, ensemble_metrics])
     
     results_df = pd.DataFrame(results)
     new_order = ['Field', 'Model', 'Word Accuracy', 'Precision', 'Recall', 'F1-Score']
@@ -431,7 +669,8 @@ def main():
         f.write("Результаты с доверительными интервалами (95%):\n\n")
         f.write(pivot_results.to_markdown()) 
 
-    #visualise(ci_results, field_types  
+    #visualise_two_metrics(ci_results, field_types) 
+    visualize_four_metrics_aggregated(ci_results) 
 
 if __name__== "__main__":
     main()
